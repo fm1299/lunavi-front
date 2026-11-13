@@ -3,24 +3,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Analog, Bbox, CellSheet, CompactCells, Feature, FullCell, Meta, Profile, Query, ResultMeta, Target, Weights } from "./api";
 import { api } from "./api";
 import Controls from "./components/Controls";
-import FindingsView from "./components/FindingsView";
 import GridMap, { type ScoreRange } from "./components/GridMap";
 import MethodView from "./components/MethodView";
 import RankedList from "./components/RankedList";
+import SitePicker from "./components/SitePicker";
 import SiteSheet from "./components/SiteSheet";
-import ValidationView from "./components/ValidationView";
 
-type View = "map" | "findings" | "validation" | "method";
-
-const VIEWS: { id: View; label: string }[] = [
-  { id: "map", label: "Map" },
-  { id: "findings", label: "Findings" },
-  { id: "validation", label: "Validation" },
-  { id: "method", label: "Method" },
-];
+type View = "analogs" | "picker" | "method";
 
 const TOP_N = 25;
+const TOP_SEPARATION_KM = 300;
 const DEBOUNCE_MS = 150;
+const COLOR_SCALE_FLOOR = 0.9; // the lowest 10 percent of scores share the bottom color
 
 interface Boot {
   meta: Meta;
@@ -57,10 +51,9 @@ export default function App() {
 
 function Workspace({ boot }: { boot: Boot }) {
   const { meta, targets, profiles, features, analogs } = boot;
-  const [view, setView] = useState<View>("map");
-  // The first target in targets.json opens by default, with results and no clicks (spec FR-W11).
-  const [targetId, setTargetId] = useState(targets[0].id);
-  const target = targets.find((t) => t.id === targetId)!;
+  const [view, setView] = useState<View>("analogs");
+  // The first preset opens by default, with results and no clicks (spec FR-W11).
+  const [target, setTarget] = useState<Target>(targets[0]);
   const [profileId, setProfileId] = useState(target.default_profile);
   const profile = profiles.find((p) => p.id === profileId)!;
   const [customWeights, setCustomWeights] = useState<Weights | null>(null);
@@ -91,14 +84,19 @@ function Workspace({ boot }: { boot: Boot }) {
     return () => window.clearTimeout(timer);
   }, [customWeights]);
 
+  // Results refresh when a site's slow temperature query finishes, through climate_status.
   const query = useMemo<Query>(
-    () => ({ target: targetId, profile: profileId, weights: debouncedWeights, bbox, terrain, minConfidence }),
-    [targetId, profileId, debouncedWeights, bbox, terrain, minConfidence],
+    () => ({ target: target.id, profile: profileId, weights: debouncedWeights, bbox, terrain, minConfidence }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [target.id, target.climate_status, profileId, debouncedWeights, bbox, terrain, minConfidence],
   );
 
   useEffect(() => {
     const controller = new AbortController();
-    Promise.all([api.map(query, controller.signal), api.top(query, TOP_N, controller.signal)])
+    Promise.all([
+      api.map(query, controller.signal),
+      api.top(query, TOP_N, TOP_SEPARATION_KM, controller.signal),
+    ])
       .then(([mapResult, topResult]) => {
         setCells(mapResult.cells);
         setResultMeta(mapResult.meta);
@@ -111,6 +109,23 @@ function Workspace({ boot }: { boot: Boot }) {
     return () => controller.abort();
   }, [query]);
 
+  // Mars temperature arrives after the site opens, so the user is not left waiting for it.
+  useEffect(() => {
+    if (target.climate_status !== "pending") return;
+    let active = true;
+    api
+      .siteClimate(target.id)
+      .then((updated) => {
+        if (active) setTarget(updated);
+      })
+      .catch(() => {
+        if (active) setTarget((current) => ({ ...current, climate_status: "unavailable" }));
+      });
+    return () => {
+      active = false;
+    };
+  }, [target.id, target.climate_status]);
+
   useEffect(() => {
     if (!selected) {
       setSheet(null);
@@ -120,38 +135,31 @@ function Workspace({ boot }: { boot: Boot }) {
     const controller = new AbortController();
     setSheetError(null);
     api
-      .cell(selected, { target: targetId, profile: profileId, weights: debouncedWeights }, controller.signal)
+      .cell(selected, { target: target.id, profile: profileId, weights: debouncedWeights }, controller.signal)
       .then(setSheet)
       .catch((error: Error) => {
         if (error.name !== "AbortError") setSheetError(`Could not load this cell: ${error.message}`);
       });
     return () => controller.abort();
-  }, [selected, targetId, profileId, debouncedWeights]);
+  }, [selected, target.id, target.climate_status, profileId, debouncedWeights]);
 
   // Stretch the color scale over the scores on screen, so differences stay visible.
   const range = useMemo<ScoreRange>(() => {
     // The API sorts by score, highest first.
     const scores = (cells?.score ?? []).filter((score) => score > 0);
     if (scores.length === 0) return { min: 0, max: 100 };
-    return { min: scores[scores.length - 1], max: scores[0] };
+    return { min: scores[Math.floor((scores.length - 1) * COLOR_SCALE_FLOOR)], max: scores[0] };
   }, [cells]);
 
   const weights = customWeights ?? profile.weights;
 
-  const onTarget = useCallback(
-    (id: string) => {
-      const next = targets.find((t) => t.id === id)!;
-      setTargetId(id);
-      setProfileId(next.default_profile);
-      setCustomWeights(null);
-      setSelected(null);
-    },
-    [targets],
-  );
-
-  const openFromFindings = useCallback((cellId: string) => {
-    setView("map");
-    setSelected(cellId);
+  const onChosen = useCallback((chosen: Target) => {
+    setTarget(chosen);
+    setProfileId(chosen.default_profile);
+    setCustomWeights(null);
+    setDebouncedWeights(null);
+    setSelected(null);
+    setView("analogs");
   }, []);
 
   const onDrawn = useCallback((drawn: Bbox) => {
@@ -169,28 +177,31 @@ function Workspace({ boot }: { boot: Boot }) {
           <span className="brand-sub">Earth analogs of the Moon and Mars</span>
         </div>
         <nav aria-label="Views">
-          {VIEWS.map((item) => (
-            <button
-              key={item.id}
-              className={`tab ${view === item.id ? "active" : ""}`}
-              aria-current={view === item.id ? "page" : undefined}
-              onClick={() => setView(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
+          <button
+            className={`tab ${view !== "method" ? "active" : ""}`}
+            aria-current={view !== "method" ? "page" : undefined}
+            onClick={() => setView("analogs")}
+          >
+            Find analogs
+          </button>
+          <button
+            className={`tab ${view === "method" ? "active" : ""}`}
+            aria-current={view === "method" ? "page" : undefined}
+            onClick={() => setView("method")}
+          >
+            Method
+          </button>
         </nav>
         <div className={`data-badge ${meta.dummy ? "dummy" : ""}`} title={meta.region.name}>
-          {meta.dummy ? "Dummy data, not real results" : "Prototype on open data · one region"}
+          {meta.dummy ? "Dummy data, not real results" : "Prototype on open data"}
         </div>
       </header>
 
       {resultError && <div className="error-banner">Could not load results: {resultError}</div>}
 
-      <div className={`workspace ${view === "map" ? "" : "hidden"}`}>
+      <div className={`workspace ${view === "analogs" ? "" : "hidden"}`}>
         <Controls
           meta={meta}
-          targets={targets}
           profiles={profiles}
           features={features}
           target={target}
@@ -202,7 +213,7 @@ function Workspace({ boot }: { boot: Boot }) {
           terrain={terrain}
           minConfidence={minConfidence}
           drawing={drawing}
-          onTarget={onTarget}
+          onChangeSite={() => setView("picker")}
           onProfile={(id) => {
             setProfileId(id);
             setCustomWeights(null);
@@ -227,7 +238,7 @@ function Workspace({ boot }: { boot: Boot }) {
           hovered={hovered}
           bbox={bbox}
           drawing={drawing}
-          visible={view === "map"}
+          visible={view === "analogs"}
           onSelect={setSelected}
           onHover={setHovered}
           onDrawn={onDrawn}
@@ -242,27 +253,13 @@ function Workspace({ boot }: { boot: Boot }) {
         </aside>
       </div>
 
-      {view !== "map" && (
+      {view === "picker" && (
+        <SitePicker meta={meta} presets={targets} current={target} onChosen={onChosen} onCancel={() => setView("analogs")} />
+      )}
+
+      {view === "method" && (
         <main className="page-shell">
-          {view === "findings" && (
-            <>
-              <div className="page-target">
-                <label className="field-label" htmlFor="findings-target">
-                  Target site
-                </label>
-                <select id="findings-target" value={targetId} onChange={(e) => onTarget(e.target.value)}>
-                  {targets.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <FindingsView target={target} features={features} onOpen={openFromFindings} />
-            </>
-          )}
-          {view === "validation" && <ValidationView targets={targets} features={features} />}
-          {view === "method" && <MethodView meta={meta} features={features} profiles={profiles} />}
+          <MethodView meta={meta} features={features} profiles={profiles} />
         </main>
       )}
 

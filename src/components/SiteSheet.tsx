@@ -1,5 +1,5 @@
 import type { BreakdownRow, CellSheet, Target } from "../api";
-import { BAND_LABEL, formatCoord, formatValue, NOVELTY_LABEL, viridis } from "../format";
+import { BAND_LABEL, formatCoord, formatValue, viridis } from "../format";
 
 interface Props {
   sheet: CellSheet | null;
@@ -54,8 +54,16 @@ function Radar({ rows, target }: { rows: BreakdownRow[]; target: Target }) {
   );
 }
 
-function matchList(keys: string[], rows: BreakdownRow[]) {
+function labels(keys: string[], rows: BreakdownRow[]) {
   return keys.map((key) => rows.find((row) => row.key === key)?.label ?? key).join(", ") || "None";
+}
+
+function hostname(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
 }
 
 export default function SiteSheet({ sheet, target, error, onClose }: Props) {
@@ -74,7 +82,8 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
   const rows = sheet.breakdown;
   const active = rows.filter((row) => row.weight > 0);
   const inactive = rows.filter((row) => row.weight === 0);
-  const sources = [...new Map(active.map((row) => [row.source_name, row])).values()];
+  const earthSources = [...new Map(active.filter((row) => row.source_url).map((row) => [row.source_name, row])).values()];
+  const siteSources = [...new Set(active.flatMap((row) => (row.target_source_url ? [row.target_source_url] : [])))];
   const scaleNote = rows.find((row) => row.key === "slope")?.note;
 
   return (
@@ -83,17 +92,16 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
         ← Back to list
       </button>
       <header className="sheet-header">
-        <h2>{formatCoord(sheet.lat, sheet.lon)}</h2>
+        <h2>{sheet.country ?? "Unnamed area"}</h2>
+        <p className="muted">{formatCoord(sheet.lat, sheet.lon)}</p>
         <div className="sheet-score">
           <strong>{sheet.score.toFixed(1)}</strong>
           <span>of 100, compared with {target.name}</span>
         </div>
         <div className="rank-meta">
-          <span className={`novelty novelty-${sheet.novelty}`}>{NOVELTY_LABEL[sheet.novelty]}</span>
           <span className={`band band-${sheet.band}`}>
             {BAND_LABEL[sheet.band]} confidence ({Math.round(sheet.confidence * 100)}%)
           </span>
-          {sheet.tags.includes("cave") && <span className="chip-static">Documented cave</span>}
           {sheet.terrain.map((terrain) => (
             <span key={terrain} className="chip-static">
               {terrain}
@@ -102,13 +110,6 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
         </div>
       </header>
 
-      <p className="sheet-novelty">
-        {sheet.novelty === "new"
-          ? "New means not in our catalog, not never studied. "
-          : ""}
-        Nearest documented analog: <strong>{sheet.nearest_known}</strong>
-        {sheet.nearest_known_km !== null && ` (${Math.round(sheet.nearest_known_km).toLocaleString("en-US")} km away)`}.
-      </p>
       {!sheet.eligible && <p className="warning">This cell does not meet any terrain class, so it is outside the ranking.</p>}
       {sheet.score === 0 && sheet.eligible && (
         <p className="warning">Score 0: this cell fails the vegetation gate, so it is too green to be an analog.</p>
@@ -117,13 +118,20 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
       <div className="match-grid">
         <div>
           <h3>Closest matches</h3>
-          <p>{matchList(sheet.closest_matches, rows)}</p>
+          <p>{labels(sheet.closest_matches, rows)}</p>
         </div>
         <div>
           <h3>Weakest matches</h3>
-          <p>{matchList(sheet.weakest_matches, rows)}</p>
+          <p>{labels(sheet.weakest_matches, rows)}</p>
         </div>
       </div>
+
+      {sheet.missing_features.length > 0 && (
+        <p className="hint">
+          <strong>No data yet:</strong> {labels(sheet.missing_features, rows)}. These are left out of the score and lower
+          confidence. Event data can fill them later.
+        </p>
+      )}
 
       <Radar rows={rows} target={target} />
 
@@ -141,12 +149,11 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
             <div className="breakdown-values">
               <span>Cell {formatValue(row.cell_value, row.unit)}</span>
               <span>
-                Target {formatValue(row.target_value, row.unit)}
+                Site {formatValue(row.target_value, row.unit)}
                 {row.target_basis && <span className={`basis basis-${row.target_basis}`}>{row.target_basis}</span>}
               </span>
             </div>
             {row.beyond_earth && <p className="flag-note">Beyond Earth: this is only as close as Earth gets.</p>}
-            {row.s === null && <p className="flag-note">Missing, so it is left out of the score and lowers confidence.</p>}
           </li>
         ))}
       </ul>
@@ -166,7 +173,7 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
                 <tr key={row.key}>
                   <th scope="row">{row.label}</th>
                   <td>{formatValue(row.cell_value, row.unit)}</td>
-                  <td>Target {formatValue(row.target_value, row.unit)}</td>
+                  <td>Site {formatValue(row.target_value, row.unit)}</td>
                 </tr>
               ))}
             </tbody>
@@ -183,16 +190,30 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
 
       {scaleNote && <p className="hint">{scaleNote}</p>}
 
-      <h3>Data sources</h3>
+      <h3>Earth data sources</h3>
       <ul className="sources">
-        {sources.map((row) => (
+        {earthSources.map((row) => (
           <li key={row.source_name}>
-            <a href={row.source_url} target="_blank" rel="noreferrer">
+            <a href={row.source_url!} target="_blank" rel="noreferrer">
               {row.source_name}
             </a>
           </li>
         ))}
       </ul>
+      {siteSources.length > 0 && (
+        <>
+          <h3>Site data sources</h3>
+          <ul className="sources">
+            {siteSources.map((url) => (
+              <li key={url}>
+                <a href={url} target="_blank" rel="noreferrer">
+                  {hostname(url)}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }

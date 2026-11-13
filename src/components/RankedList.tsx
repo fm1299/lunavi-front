@@ -1,5 +1,5 @@
 import type { FullCell, ResultMeta } from "../api";
-import { BAND_LABEL, formatCoord, NOVELTY_LABEL } from "../format";
+import { BAND_LABEL, formatCoord } from "../format";
 
 interface Props {
   cells: FullCell[];
@@ -13,9 +13,10 @@ export default function RankedList({ cells, meta, hovered, onSelect, onHover }: 
   return (
     <div className="ranked">
       <header className="panel-header">
-        <h2>Top candidates</h2>
-        {meta && <span>{meta.count.toLocaleString("en-US")} eligible cells shown</span>}
+        <h2>Top Earth analogs</h2>
+        {meta && <span>from {meta.count.toLocaleString("en-US")} eligible cells</span>}
       </header>
+      <p className="ranked-note">The best cell in each area, at least 300 km apart, so each row is a different place.</p>
       {cells.length === 0 && <p className="empty">No cells match these filters. Try a wider area or lower confidence.</p>}
       <ol>
         {cells.map((cell, index) => (
@@ -28,9 +29,9 @@ export default function RankedList({ cells, meta, hovered, onSelect, onHover }: 
             >
               <span className="rank-number">{index + 1}</span>
               <span className="rank-main">
-                <span className="rank-coord">{formatCoord(cell.lat, cell.lon)}</span>
+                <span className="rank-place">{cell.country ?? "Unnamed area"}</span>
                 <span className="rank-meta">
-                  <span className={`novelty novelty-${cell.novelty}`}>{NOVELTY_LABEL[cell.novelty]}</span>
+                  <span className="rank-coord">{formatCoord(cell.lat, cell.lon)}</span>
                   <span className={`band band-${cell.band}`}>{BAND_LABEL[cell.band]} confidence</span>
                 </span>
               </span>

@@ -3,8 +3,8 @@
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 export type Basis = "measured" | "literature" | "physical";
-export type Novelty = "known" | "near_known" | "new";
 export type Band = "high" | "medium" | "low";
+export type Body = "moon" | "mars";
 export type Weights = Record<string, number>;
 export type Bbox = [number, number, number, number];
 
@@ -16,16 +16,18 @@ export interface TargetFeature {
   note: string | null;
 }
 
+/** A Moon or Mars site: a preset, or a location chosen on the map. */
 export interface Target {
   id: string;
   name: string;
-  body: "moon" | "mars";
+  body: Body;
   lat: number;
   lon: number;
   description: string;
   coordinate_note: string | null;
   default_profile: string;
   features: Record<string, TargetFeature>;
+  climate_status: "ready" | "pending" | "unavailable";
   beyond_earth: string[];
 }
 
@@ -48,8 +50,8 @@ export interface Feature {
   source_quality: number;
   resolution_factor: number;
   source_name: string;
-  source_url: string;
-  license: string;
+  source_url: string | null;
+  license: string | null;
   note: string | null;
 }
 
@@ -57,9 +59,10 @@ export interface Meta {
   dummy: boolean;
   generated_at: string;
   grid_resolution_deg: number;
+  land_cells: number;
   region: { id: string; name: string; lat_min: number; lat_max: number; lon_min: number; lon_max: number };
   region_presets: { id: string; name: string; bbox: Bbox }[];
-  novelty_km: { known: number; near_known: number };
+  site_window_km: number;
   confidence_bands: { high: number; medium: number };
   limits_statement: string;
 }
@@ -93,18 +96,14 @@ export interface CompactCells {
   lon: number[];
   score: number[];
   confidence: number[];
-  novelty: Novelty[];
 }
 
 export interface FullCell {
   cell_id: string;
   lat: number;
   lon: number;
+  country: string | null;
   terrain: string[];
-  novelty: Novelty;
-  nearest_known: string;
-  nearest_known_km: number | null;
-  tags: string[];
   score: number;
   confidence: number;
   band: Band;
@@ -127,7 +126,7 @@ export interface BreakdownRow {
   cell_z: number | null;
   target_z: number | null;
   source_name: string;
-  source_url: string;
+  source_url: string | null;
   note: string | null;
 }
 
@@ -141,62 +140,6 @@ export interface CellSheet extends FullCell {
   missing_features: string[];
   test_tags: string[];
   eligible: boolean;
-}
-
-export interface Candidate {
-  id: string;
-  name: string | null;
-  status?: string;
-  cell_ids: string[];
-  lat: number;
-  lon: number;
-  score: number;
-  confidence: number;
-  closest_matches: string[];
-  weakest_matches: string[];
-  test_first: string[];
-}
-
-export interface Findings {
-  target_id: string;
-  profile: string;
-  candidates: Candidate[];
-  pending: Candidate[];
-  catalog_size_verified: number;
-  catalog_size_required: number;
-  ready_for_findings: boolean;
-}
-
-export interface ControlRow {
-  id: string;
-  name: string;
-  target: string;
-  status: "ranked" | "outside_region" | "not_comparable" | "not_land";
-  cell_id?: string;
-  used_nearby_cell?: boolean;
-  score?: number;
-  top_percent?: number;
-  meets_goal?: boolean;
-  meets_stretch?: boolean;
-  in_bottom_half?: boolean;
-}
-
-export interface TargetReport {
-  target: string;
-  profile: string;
-  positive_controls: ControlRow[];
-  negative_controls: ControlRow[];
-  leave_one_feature_out: { feature: string; top50_overlap: number }[];
-  weight_sensitivity: { runs: number; perturbation: number; mean_top50_overlap: number; min_top50_overlap: number };
-  method_comparison_mean_top_percent: { arithmetic: number | null; geometric: number | null };
-  funnel: Record<string, number>;
-}
-
-export interface Validation {
-  targets: TargetReport[];
-  honest_gaps: string[];
-  findings_audit: { named_findings: number; removed_by_literature_check: unknown[] };
-  goals: { top_percent: number; stretch_top_percent: number };
 }
 
 export interface Query {
@@ -236,14 +179,17 @@ export const api = {
   profiles: () => get<Profile[]>("/profiles"),
   features: () => get<Feature[]>("/features"),
   analogs: () => get<Analog[]>("/analogs"),
-  validation: () => get<Validation>("/validation"),
-  findings: (target: string) => get<Findings>("/findings", new URLSearchParams({ target })),
+  resolveSite: (body: Body, lat: number, lon: number) =>
+    get<Target>("/sites/resolve", new URLSearchParams({ body, lat: String(lat), lon: String(lon) })),
+  siteClimate: (id: string) => get<Target>(`/sites/${id}/climate`),
   map: (query: Query, signal?: AbortSignal) =>
     get<{ meta: ResultMeta; cells: CompactCells }>("/results", resultParams(query), signal),
-  top: (query: Query, topN: number, signal?: AbortSignal) => {
+  /** The best cells, spaced apart so the list shows distinct places. */
+  top: (query: Query, topN: number, minSeparationKm: number, signal?: AbortSignal) => {
     const params = resultParams(query);
     params.set("detail", "full");
     params.set("top_n", String(topN));
+    params.set("min_separation_km", String(minSeparationKm));
     return get<{ meta: ResultMeta; cells: FullCell[] }>("/results", params, signal);
   },
   cell: (cellId: string, query: Pick<Query, "target" | "profile" | "weights">, signal?: AbortSignal) => {

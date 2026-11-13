@@ -3,7 +3,6 @@ import { formatValue, TERRAIN_CHIPS } from "../format";
 
 interface Props {
   meta: Meta;
-  targets: Target[];
   profiles: Profile[];
   features: Feature[];
   target: Target;
@@ -15,7 +14,7 @@ interface Props {
   terrain: string[];
   minConfidence: number;
   drawing: boolean;
-  onTarget: (id: string) => void;
+  onChangeSite: () => void;
   onProfile: (id: string) => void;
   onWeight: (key: string, value: number) => void;
   onResetWeights: () => void;
@@ -31,44 +30,47 @@ const BASIS_TITLE = {
   physical: "Follows directly from the body",
 };
 
+const CLIMATE_MESSAGE = {
+  pending: "Reading temperature from the Mars Climate Database…",
+  unavailable: "Temperature could not be read right now, so those values are blank.",
+};
+
 export default function Controls(props: Props) {
-  const { meta, targets, profiles, features, target, profile, weights, customized, beyondShare } = props;
+  const { meta, profiles, features, target, profile, weights, customized, beyondShare } = props;
   const gated = new Set(Object.keys(profile.gates));
   const sliders = features.filter((feature) => !gated.has(feature.key));
+  const missing = features.filter((feature) => (target.features[feature.key]?.value ?? null) === null);
 
   return (
     <aside className="panel controls" aria-label="Search settings">
       <section>
-        <label className="field-label" htmlFor="target">
-          Target site
-        </label>
-        <select id="target" value={target.id} onChange={(e) => props.onTarget(e.target.value)}>
-          {(["moon", "mars"] as const).map((body) => (
-            <optgroup key={body} label={body === "moon" ? "Moon" : "Mars"}>
-              {targets
-                .filter((t) => t.body === body)
-                .map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-            </optgroup>
-          ))}
-        </select>
+        <div className="section-row">
+          <span className={`body-tag body-${target.body}`}>{target.body === "moon" ? "Moon" : "Mars"}</span>
+          <button className="button primary" onClick={props.onChangeSite}>
+            Change site
+          </button>
+        </div>
+        <h1 className="site-name">{target.name}</h1>
         <p className="target-description">{target.description}</p>
+        {target.climate_status !== "ready" && (
+          <p className={target.climate_status === "pending" ? "hint pending" : "warning"}>
+            {CLIMATE_MESSAGE[target.climate_status]}
+          </p>
+        )}
 
-        <details className="stats-card">
-          <summary>Site values</summary>
+        <details className="stats-card" open>
+          <summary>Values at this site</summary>
           <table>
             <tbody>
               {features.map((feature) => {
                 const entry = target.features[feature.key];
+                const hasValue = (entry?.value ?? null) !== null;
                 const flagged = target.beyond_earth.includes(feature.key);
                 return (
                   <tr key={feature.key} title={entry?.note ?? undefined}>
                     <th scope="row">{feature.label}</th>
-                    <td>
-                      {entry?.source_url ? (
+                    <td className={hasValue ? "" : "no-data"}>
+                      {entry?.source_url && hasValue ? (
                         <a href={entry.source_url} target="_blank" rel="noreferrer">
                           {formatValue(entry.value, feature.unit)}
                         </a>
@@ -93,6 +95,9 @@ export default function Controls(props: Props) {
               })}
             </tbody>
           </table>
+          {missing.length > 0 && (
+            <p className="hint">Blank values are left out of the score and lower confidence. Event data can fill them later.</p>
+          )}
         </details>
         {beyondShare > 0 && (
           <p className="beyond-note">

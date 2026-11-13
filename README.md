@@ -1,6 +1,8 @@
 # LUNAVI web app
 
-Map, ranked list, site sheets, findings and validation for LUNAVI, which finds and ranks Earth analogs of Moon and Mars sites. It talks only to the API in [lunavi-back](https://github.com/fm1299/lunavi-back).
+Choose any location on the Moon or Mars, and see which places on Earth match it best. The app talks only to the API in [lunavi-back](https://github.com/fm1299/lunavi-back).
+
+This branch is the base. The Findings and Validation views are on the `full-prototype` branch, ready to bring back.
 
 ## Run it
 
@@ -24,14 +26,13 @@ npm run build   # type-check and production build in dist/
 |---|---|
 | `src/api.ts` | Every API call, and types that mirror the data contract |
 | `src/App.tsx` | App state and layout |
-| `src/components/GridMap.tsx` | Leaflet map with the score grid drawn on one canvas |
-| `src/components/Controls.tsx` | Target, purpose, weights, area, terrain and confidence controls |
-| `src/components/RankedList.tsx` | Top candidates, linked to the map |
-| `src/components/SiteSheet.tsx` | The full explanation of one cell |
-| `src/components/FindingsView.tsx` | Named findings and candidates awaiting a literature check |
-| `src/components/ValidationView.tsx` | Controls, screening funnel and honest gaps |
+| `src/components/SitePicker.tsx` | Moon and Mars maps for choosing a site |
+| `src/components/GridMap.tsx` | Earth map with the score grid drawn on a canvas |
+| `src/components/Controls.tsx` | Site values, purpose, weights, area, terrain and confidence controls |
+| `src/components/RankedList.tsx` | Top analogs, spaced apart and linked to the map |
+| `src/components/SiteSheet.tsx` | The full explanation of one Earth cell |
 | `src/components/MethodView.tsx` | Formulas, sources and the limits statement |
 
 ## How to read the map
 
-Color is the score, on a colorblind-safe viridis scale stretched over the scores on screen. Opacity is confidence. Gray cells fail the vegetation gate.
+Color is the score, on a colorblind-safe viridis scale stretched over the scores on screen. Opacity is confidence. Gray cells fail the vegetation gate. Pins are documented analogs.

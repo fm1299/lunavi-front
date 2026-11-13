@@ -6,6 +6,8 @@ import { cellId } from "../api";
 import { formatCoord, viridis } from "../format";
 
 const GIBS_URL = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best";
+const MIN_HIGHLIGHT_PX = 12;
+const FOCUS_ZOOM = 5;
 
 export interface ScoreRange {
   min: number;
@@ -27,82 +29,118 @@ interface Props {
   onDrawn: (bbox: Bbox) => void;
 }
 
-/** A grid drawn on one canvas, so a global grid stays interactive (spec section 9). */
+/**
+ * The grid drawn on one canvas, so the whole Earth stays interactive (spec section 9).
+ * Highlights use a second canvas, so hovering never redraws tens of thousands of cells.
+ */
 class CellCanvas extends L.Layer {
-  private canvas = L.DomUtil.create("canvas", "leaflet-zoom-hide cell-canvas");
+  private cellsCanvas = L.DomUtil.create("canvas", "leaflet-zoom-hide cell-canvas");
+  private highlightCanvas = L.DomUtil.create("canvas", "leaflet-zoom-hide cell-canvas");
   private leaflet: L.Map | null = null;
   cells: CompactCells | null = null;
+  lookup = new Map<string, number>();
   range: ScoreRange = { min: 0, max: 100 };
-  resolution = 0.25;
+  resolution = 0.5;
   selected: string | null = null;
   hovered: string | null = null;
 
   onAdd(map: L.Map) {
     this.leaflet = map;
-    map.getPanes().overlayPane.appendChild(this.canvas);
+    const pane = map.getPanes().overlayPane;
+    pane.appendChild(this.cellsCanvas);
+    pane.appendChild(this.highlightCanvas);
     map.on("moveend zoomend resize", this.draw, this);
     this.draw();
     return this;
   }
 
   onRemove(map: L.Map) {
-    this.canvas.remove();
+    this.cellsCanvas.remove();
+    this.highlightCanvas.remove();
     map.off("moveend zoomend resize", this.draw, this);
     this.leaflet = null;
     return this;
   }
 
+  private prepare(canvas: HTMLCanvasElement, map: L.Map) {
+    const size = map.getSize();
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = size.x * ratio;
+    canvas.height = size.y * ratio;
+    canvas.style.width = `${size.x}px`;
+    canvas.style.height = `${size.y}px`;
+    L.DomUtil.setPosition(canvas, map.containerPointToLayerPoint([0, 0]));
+    const context = canvas.getContext("2d");
+    context?.scale(ratio, ratio);
+    return context;
+  }
+
+  /** A pixel rectangle for a cell. Mercator x depends only on longitude and y only on latitude. */
+  private projector(map: L.Map) {
+    const half = this.resolution / 2;
+    const xs = new Map<number, [number, number]>();
+    const ys = new Map<number, [number, number]>();
+    return (lat: number, lon: number) => {
+      let x = xs.get(lon);
+      if (!x) {
+        x = [map.latLngToContainerPoint([0, lon - half]).x, map.latLngToContainerPoint([0, lon + half]).x];
+        xs.set(lon, x);
+      }
+      let y = ys.get(lat);
+      if (!y) {
+        y = [map.latLngToContainerPoint([lat + half, 0]).y, map.latLngToContainerPoint([lat - half, 0]).y];
+        ys.set(lat, y);
+      }
+      return { x: x[0], y: y[0], w: x[1] - x[0], h: y[1] - y[0] };
+    };
+  }
+
   draw() {
     const map = this.leaflet;
     if (!map) return;
-    const size = map.getSize();
-    const ratio = window.devicePixelRatio || 1;
-    this.canvas.width = size.x * ratio;
-    this.canvas.height = size.y * ratio;
-    this.canvas.style.width = `${size.x}px`;
-    this.canvas.style.height = `${size.y}px`;
-    L.DomUtil.setPosition(this.canvas, map.containerPointToLayerPoint([0, 0]));
-
-    const context = this.canvas.getContext("2d");
-    if (!context || !this.cells) return;
-    context.scale(ratio, ratio);
-
-    const half = this.resolution / 2;
-    const { cell_id, lat, lon, score, confidence } = this.cells;
-    const spread = Math.max(this.range.max - this.range.min, 1);
-    const box = (index: number) => {
-      const a = map.latLngToContainerPoint([lat[index] + half, lon[index] - half]);
-      const b = map.latLngToContainerPoint([lat[index] - half, lon[index] + half]);
-      return { x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y };
-    };
-
-    for (let i = 0; i < cell_id.length; i++) {
-      const { x, y, w, h } = box(i);
-      if (x > size.x || y > size.y || x + w < 0 || y + h < 0) continue;
-      if (score[i] <= 0) {
-        // Vetoed by the gate: visible, but clearly not a candidate.
-        context.globalAlpha = 0.28;
-        context.fillStyle = "#3b4350";
-      } else {
-        // Confidence as opacity (spec FR-W8).
-        context.globalAlpha = 0.3 + 0.65 * confidence[i];
-        context.fillStyle = viridis((score[i] - this.range.min) / spread);
+    const context = this.prepare(this.cellsCanvas, map);
+    if (context && this.cells) {
+      const size = map.getSize();
+      const box = this.projector(map);
+      const { lat, lon, score, confidence } = this.cells;
+      const spread = Math.max(this.range.max - this.range.min, 1);
+      for (let i = 0; i < lat.length; i++) {
+        const { x, y, w, h } = box(lat[i], lon[i]);
+        if (x > size.x || y > size.y || x + w < 0 || y + h < 0) continue;
+        if (score[i] <= 0) {
+          // Vetoed by the gate: visible, but clearly not a candidate.
+          context.globalAlpha = 0.28;
+          context.fillStyle = "#3b4350";
+        } else {
+          // Confidence as opacity (spec FR-W8).
+          context.globalAlpha = 0.3 + 0.65 * confidence[i];
+          context.fillStyle = viridis((score[i] - this.range.min) / spread);
+        }
+        context.fillRect(x, y, Math.ceil(w), Math.ceil(h));
       }
-      context.fillRect(x, y, Math.ceil(w), Math.ceil(h));
     }
+    this.drawHighlights();
+  }
 
-    context.globalAlpha = 1;
+  drawHighlights() {
+    const map = this.leaflet;
+    if (!map) return;
+    const context = this.prepare(this.highlightCanvas, map);
+    if (!context || !this.cells) return;
+    const box = this.projector(map);
     for (const [id, color] of [
       [this.hovered, "#ffffff"],
       [this.selected, "#f2a65a"],
     ] as const) {
-      if (!id) continue;
-      const index = cell_id.indexOf(id);
-      if (index < 0) continue;
-      const { x, y, w, h } = box(index);
+      const index = id ? this.lookup.get(id) : undefined;
+      if (index === undefined) continue;
+      const { x, y, w, h } = box(this.cells.lat[index], this.cells.lon[index]);
+      // At low zoom a cell is a pixel or two, so keep the outline big enough to see.
+      const width = Math.max(w, MIN_HIGHLIGHT_PX);
+      const height = Math.max(h, MIN_HIGHLIGHT_PX);
       context.strokeStyle = color;
       context.lineWidth = 2;
-      context.strokeRect(x, y, w, h);
+      context.strokeRect(x + w / 2 - width / 2, y + h / 2 - height / 2, width, height);
     }
   }
 }
@@ -115,36 +153,30 @@ export default function GridMap(props: Props) {
   const tipRef = useRef<HTMLDivElement>(null);
   const handlers = useRef(props);
   handlers.current = props;
-  const lookup = useRef(new Map<string, number>());
 
   // Create the map once.
   useEffect(() => {
     if (!element.current || mapRef.current) return;
-    const map = L.map(element.current, { zoomControl: true, attributionControl: true, minZoom: 3 });
+    const map = L.map(element.current, {
+      zoomControl: true,
+      attributionControl: true,
+      minZoom: 2,
+      maxBounds: [
+        [-85.05, -180],
+        [85.05, 180],
+      ],
+      maxBoundsViscosity: 0.8,
+    });
     L.tileLayer(`${GIBS_URL}/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg`, {
       attribution: 'Imagery: <a href="https://earthdata.nasa.gov/gibs">NASA GIBS</a>',
       maxNativeZoom: 8,
       maxZoom: 11,
+      noWrap: true,
     }).addTo(map);
     const layer = new CellCanvas();
     layer.resolution = meta.grid_resolution_deg;
     layer.addTo(map);
-    // Place names sit above the grid, so a cell is easy to locate.
-    const labels = map.createPane("labels");
-    labels.style.zIndex = "450";
-    labels.style.pointerEvents = "none";
-    // These tiles are opaque black where there are no names. "screen" turns black transparent.
-    labels.style.mixBlendMode = "screen";
-    L.tileLayer(`${GIBS_URL}/Reference_Labels_15m/default/GoogleMapsCompatible_Level13/{z}/{y}/{x}.png`, {
-      pane: "labels",
-      maxNativeZoom: 13,
-      maxZoom: 11,
-    }).addTo(map);
-    const { region } = meta;
-    map.fitBounds([
-      [region.lat_min, region.lon_min],
-      [region.lat_max, region.lon_max],
-    ]);
+    map.setView([15, 0], 2);
     mapRef.current = map;
     layerRef.current = layer;
 
@@ -153,17 +185,18 @@ export default function GridMap(props: Props) {
       const lat = Math.round(event.latlng.lat / res) * res;
       const lon = Math.round(event.latlng.lng / res) * res;
       const id = cellId(lat, lon);
-      return lookup.current.has(id) ? id : null;
+      return layerRef.current?.lookup.has(id) ? id : null;
     };
 
     map.on("mousemove", (event: L.LeafletMouseEvent) => {
       const id = cellAt(event);
       handlers.current.onHover(id);
       const tip = tipRef.current;
-      const data = layerRef.current?.cells;
+      const current = layerRef.current;
       if (!tip) return;
-      if (id && data) {
-        const index = lookup.current.get(id)!;
+      if (id && current?.cells) {
+        const index = current.lookup.get(id)!;
+        const data = current.cells;
         tip.style.display = "block";
         tip.style.transform = `translate(${event.containerPoint.x + 14}px, ${event.containerPoint.y + 14}px)`;
         const vetoed = data.score[index] <= 0;
@@ -190,32 +223,41 @@ export default function GridMap(props: Props) {
       mapRef.current = null;
       layerRef.current = null;
     };
-    // The region and resolution are fixed for the life of a results set.
+    // The grid resolution is fixed for the life of a results set.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Redraw when the data or highlights change.
+  // Redraw every cell when the data changes.
   useEffect(() => {
     const layer = layerRef.current;
     if (!layer) return;
     if (layer.cells !== cells) {
-      lookup.current = new Map((cells?.cell_id ?? []).map((id, index) => [id, index]));
+      layer.lookup = new Map((cells?.cell_id ?? []).map((id, index) => [id, index]));
+      layer.cells = cells;
     }
-    layer.cells = cells;
     layer.range = range;
+    layer.draw();
+  }, [cells, range]);
+
+  // Hovering and selecting only touch the highlight canvas.
+  useEffect(() => {
+    const layer = layerRef.current;
+    if (!layer) return;
     layer.selected = selected;
     layer.hovered = hovered;
-    layer.draw();
-  }, [cells, range, selected, hovered]);
+    layer.drawHighlights();
+  }, [selected, hovered]);
 
-  // Keep the selected cell in view.
+  // Bring the selected cell into view, close enough to see it.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !selected || !cells) return;
-    const index = cells.cell_id.indexOf(selected);
-    if (index < 0) return;
+    const layer = layerRef.current;
+    if (!map || !layer || !selected || !cells) return;
+    const index = layer.lookup.get(selected);
+    if (index === undefined) return;
     const point = L.latLng(cells.lat[index], cells.lon[index]);
-    if (!map.getBounds().contains(point)) map.panTo(point);
+    if (map.getZoom() < FOCUS_ZOOM) map.flyTo(point, FOCUS_ZOOM, { duration: 0.6 });
+    else if (!map.getBounds().contains(point)) map.panTo(point);
   }, [selected, cells]);
 
   // Known analog pins. Negative controls are not analogs, so they get no pin.
@@ -227,7 +269,7 @@ export default function GridMap(props: Props) {
         .filter((site) => site.role !== "negative_control")
         .map((site) =>
           L.circleMarker([site.lat, site.lon], {
-            radius: 5,
+            radius: 4,
             color: "#0d1117",
             weight: 1.5,
             fillColor: "#f2a65a",
@@ -240,18 +282,20 @@ export default function GridMap(props: Props) {
     };
   }, [analogs]);
 
-  // Show the active area.
+  // Show the active area, and fit the view to it.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !bbox) return;
     const [west, south, east, north] = bbox;
-    const rectangle = L.rectangle(
-      [
-        [south, west],
-        [north, east],
-      ],
-      { color: "#f2a65a", weight: 1.5, fill: false, dashArray: "6 5", interactive: false },
-    ).addTo(map);
+    const bounds = L.latLngBounds([south, west], [north, east]);
+    const rectangle = L.rectangle(bounds, {
+      color: "#f2a65a",
+      weight: 1.5,
+      fill: false,
+      dashArray: "6 5",
+      interactive: false,
+    }).addTo(map);
+    map.fitBounds(bounds);
     return () => {
       rectangle.remove();
     };

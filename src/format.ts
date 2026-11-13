@@ -1,4 +1,4 @@
-import type { Band, Novelty } from "./api";
+import type { Band } from "./api";
 
 /** Viridis is colorblind-safe and stays readable on a projector (spec FR-W3). */
 const VIRIDIS: [number, number, number][] = [
@@ -25,8 +25,6 @@ export function viridis(t: number): string {
   return `rgb(${channel(0)}, ${channel(1)}, ${channel(2)})`;
 }
 
-export const VIRIDIS_CSS = `linear-gradient(90deg, ${VIRIDIS.map((c) => `rgb(${c.join(",")})`).join(", ")})`;
-
 export function formatCoord(lat: number, lon: number): string {
   const ns = lat >= 0 ? "N" : "S";
   const ew = lon >= 0 ? "E" : "W";
@@ -34,7 +32,7 @@ export function formatCoord(lat: number, lon: number): string {
 }
 
 export function formatValue(value: number | string | null | undefined, unit: string): string {
-  if (value === null || value === undefined) return "no data";
+  if (value === null || value === undefined) return "no data yet";
   if (typeof value === "string") return value;
   const magnitude = Math.abs(value);
   const digits = magnitude >= 100 ? 0 : magnitude >= 10 ? 1 : 2;
@@ -44,12 +42,6 @@ export function formatValue(value: number | string | null | undefined, unit: str
   if (unit === "C") return `${text} °C`;
   return `${text} ${unit}`;
 }
-
-export const NOVELTY_LABEL: Record<Novelty, string> = {
-  known: "Known",
-  near_known: "Near known",
-  new: "New",
-};
 
 export const BAND_LABEL: Record<Band, string> = {
   high: "High",
@@ -61,6 +53,5 @@ export const TERRAIN_CHIPS = [
   { id: "arid", label: "Desert and arid" },
   { id: "polar", label: "Polar" },
   { id: "volcanic", label: "Volcanic" },
-  { id: "caves", label: "Caves" },
   { id: "other", label: "Other" },
 ];
