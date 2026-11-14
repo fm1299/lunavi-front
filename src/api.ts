@@ -53,6 +53,8 @@ export interface Feature {
   source_url: string | null;
   license: string | null;
   note: string | null;
+  /** False when each body measures the value from its own zero, such as elevation. */
+  comparable_across_bodies?: boolean;
 }
 
 export interface Meta {
@@ -65,6 +67,8 @@ export interface Meta {
   site_window_km: number;
   confidence_bands: { high: number; medium: number };
   limits_statement: string;
+  /** Missing from an API built before the search in plain words (spec FR-AI2). */
+  ai?: { available: boolean; provider: string | null; model: string | null };
 }
 
 export interface Analog {
@@ -112,6 +116,65 @@ export interface FullCell {
   access: number | null;
   road_km: number | null;
   airport_km: number | null;
+  /** The weighted features this cell matches best and worst. Missing from an older API. */
+  closest_matches?: string[];
+  weakest_matches?: string[];
+}
+
+/** What a request in plain words turned into: the same settings the controls hold. */
+export interface AskPlan {
+  target: Target;
+  profile: string;
+  emphasis: string | null;
+  region: string | null;
+  terrain: string[];
+  min_confidence: number;
+}
+
+export interface AskReply {
+  understood: boolean;
+  plan: AskPlan | null;
+  not_applied: string[];
+  model: string | null;
+}
+
+/** The search as it stands, so a request such as "now only deserts" can build on it. */
+export interface CurrentSearch {
+  target: string;
+  profile: string;
+  emphasis: string | null;
+  region: string | null;
+  terrain: string[];
+  minConfidence: number;
+}
+
+export interface SummaryFacts {
+  site: string;
+  body: Body;
+  purpose: string;
+  region: string | null;
+  terrain_filter: string[];
+  cells_compared: number;
+  emphasis: { feature: string; site_value: number | string | null; unit: string; beyond_earth_range: boolean } | null;
+  beyond_earth_features: string[];
+  top: {
+    rank: number;
+    country: string | null;
+    lat: number;
+    lon: number;
+    score: number;
+    confidence: Band;
+    closest_matches: string[];
+    weakest_matches: string[];
+  }[];
+}
+
+/** text is null when no model wrote it; the app then writes its own sentence from the facts. */
+export interface SummaryReply {
+  text: string | null;
+  source: "ai" | "template";
+  model: string | null;
+  facts: SummaryFacts;
 }
 
 export interface Portfolio {
@@ -226,6 +289,28 @@ export const api = {
     params.set("top_n", String(topN));
     params.set("min_separation_km", String(minSeparationKm));
     return `${API_URL}/export?${params}`;
+  },
+  /** Turn a request in plain words into search settings (spec FR-AI2). */
+  ask: (text: string, lang: string, current: CurrentSearch) => {
+    const params = new URLSearchParams({ text, lang, target: current.target, profile: current.profile });
+    if (current.emphasis) params.set("emphasis", current.emphasis);
+    if (current.region) params.set("region", current.region);
+    if (current.terrain.length) params.set("terrain", current.terrain.join(","));
+    if (current.minConfidence > 0) params.set("min_confidence", String(current.minConfidence));
+    return get<AskReply>("/ask", params);
+  },
+  /** A short answer about the best results, written from their numbers. */
+  summary: (
+    query: Query,
+    extras: { emphasis: string | null; region: string | null; lang: string; minSeparationKm: number },
+    signal?: AbortSignal,
+  ) => {
+    const params = resultParams(query);
+    params.set("lang", extras.lang);
+    params.set("min_separation_km", String(extras.minSeparationKm));
+    if (extras.emphasis) params.set("emphasis", extras.emphasis);
+    if (extras.region) params.set("region", extras.region);
+    return get<SummaryReply>("/summary", params, signal);
   },
   portfolio: (query: Query, signal?: AbortSignal) => get<Portfolio>("/portfolio", resultParams(query), signal),
   gaps: (target: string, signal?: AbortSignal) => get<Gaps>("/gaps", new URLSearchParams({ target }), signal),

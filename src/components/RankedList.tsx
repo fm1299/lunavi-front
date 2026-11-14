@@ -1,9 +1,10 @@
-import type { FullCell, ResultMeta } from "../api";
-import { BAND_LABEL, formatCoord } from "../format";
+import type { Feature, FullCell, ResultMeta } from "../api";
+import { BAND_LABEL, formatCoord, lowerFirst } from "../format";
 import { numberLocale, t } from "../i18n";
 
 interface Props {
   cells: FullCell[];
+  features: Feature[];
   meta: ResultMeta | null;
   hovered: string | null;
   /** Shown only on the printed page, so a saved PDF says what it lists. */
@@ -13,7 +14,9 @@ interface Props {
   onHover: (id: string | null) => void;
 }
 
-export default function RankedList({ cells, meta, hovered, printTitle, csvUrl, onSelect, onHover }: Props) {
+export default function RankedList({ cells, features, meta, hovered, printTitle, csvUrl, onSelect, onHover }: Props) {
+  const names = (keys: string[]) =>
+    keys.map((key) => lowerFirst(t(features.find((feature) => feature.key === key)?.label ?? key))).join(", ");
   return (
     <div className="ranked">
       <header className="panel-header">
@@ -52,6 +55,16 @@ export default function RankedList({ cells, meta, hovered, printTitle, csvUrl, o
                   <span className="rank-coord">{formatCoord(cell.lat, cell.lon)}</span>
                   <span className={`band band-${cell.band}`}>{t("{band} confidence", { band: t(BAND_LABEL[cell.band]) })}</span>
                 </span>
+                {cell.closest_matches && cell.closest_matches.length > 0 && (
+                  <span className="rank-why">
+                    {cell.weakest_matches && cell.weakest_matches.length > 0
+                      ? t("Matches on {closest} · differs on {weakest}", {
+                          closest: names(cell.closest_matches),
+                          weakest: names(cell.weakest_matches),
+                        })
+                      : t("Matches on {closest}", { closest: names(cell.closest_matches) })}
+                  </span>
+                )}
               </span>
               <span className="rank-score">{cell.score.toFixed(1)}</span>
             </button>

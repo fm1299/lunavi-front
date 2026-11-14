@@ -28,16 +28,30 @@ npm run build   # type-check and production build in dist/
 | `src/App.tsx` | App state and layout |
 | `src/components/SitePicker.tsx` | Moon and Mars maps for choosing a site |
 | `src/components/GridMap.tsx` | Earth map with the score grid drawn on a canvas |
-| `src/components/Controls.tsx` | Site values, purpose, weights, area, terrain and confidence controls |
+| `src/components/AskBox.tsx` | The question in plain words, shown when the API has a language model |
+| `src/components/SearchSentence.tsx` | The search as one sentence whose words are the controls |
+| `src/components/Answer.tsx` | The short answer above the list, and one-touch ways to refine the search |
+| `src/components/Controls.tsx` | Advanced settings: site values, purpose, weights, area, terrain and confidence |
 | `src/components/RankedList.tsx` | Top analogs, spaced apart and linked to the map |
 | `src/components/SiteSheet.tsx` | The full explanation of one Earth cell |
 | `src/components/Coverage.tsx` | The analog portfolio and the gap map |
 | `src/components/MethodView.tsx` | Formulas, sources and the limits statement |
 | `src/i18n.ts` | Spanish and English texts. The English text is the key, so add a line to `ES` for each new text |
 
+## Search in plain words
+
+The left column reads top to bottom: a question, the search as a sentence, a short answer, and the list.
+
+- **Question.** Type what you are looking for, or pick an idea. The API's language model turns it into search settings (spec FR-AI2). The box only appears when the API reports a model in `/meta`; see the lunavi-back README for the key it needs.
+- **Sentence.** "I'm looking for places in *South America* similar to *Jezero crater* for *rover mobility*, giving more weight to *mean temperature*, on *any* terrain." Each word is a control, and the words a question filled in are highlighted. It works with no model at all. "Back to the previous search" undoes the last change.
+- **Answer.** Written from the numbers of the best results, and written again whenever the search changes. With no model, the app writes it from the same facts. The buttons under it refine the search with one touch.
+- **Advanced settings.** The sliders, site values, drawn area and minimum confidence are folded at the bottom and stay in step with the sentence.
+
+Giving a feature more weight sets its slider to 4. The language model never sees or changes a score.
+
 ## How to read the map
 
-Color is the score, on a colorblind-safe viridis scale stretched over the scores on screen. Opacity is confidence. Gray cells fail the vegetation gate. Pins are documented analogs.
+Color is the score, on a colorblind-safe viridis scale stretched over the scores on screen. Opacity is confidence. Gray cells fail the vegetation gate. Numbered pins are the first ten places of the list, and plain pins are documented analogs.
 
 ## Language and export
 

@@ -69,6 +69,16 @@ export default function MethodView({ meta, features, profiles }: Props) {
         )}
       </p>
 
+      <h2>{t("Search in plain words")}</h2>
+      <p>
+        {t(
+          "You can describe what you are looking for in your own words. A free language model turns the request into the same settings the controls hold: a site, a purpose, one feature to give more importance to, an area and terrain. Anything it returns that is not a known site, purpose, feature or area is dropped and reported. A comparison such as \"colder\" gives that feature more importance; it is not a hard filter. The model also writes the short answer above the list from the numbers of the best results, and an answer that quotes any other number is discarded. The model never sees or changes a score: the ranking is always the same calculation.",
+        )}{" "}
+        {meta.ai?.available
+          ? t("Model in use: {model}.", { model: `${meta.ai.provider} ${meta.ai.model}` })
+          : t("No language model is set up right now, so the search is built by hand and the answer is written automatically.")}
+      </p>
+
       <h2>{t("Research purposes")}</h2>
       <table className="data-table">
         <thead>

@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { Analog, Bbox, CellSheet, CompactCells, Feature, FullCell, Gaps, Meta, Portfolio, Profile, Query, ResultMeta, Target, Weights } from "./api";
+import type { Analog, Bbox, CellSheet, CompactCells, Feature, FullCell, Gaps, Meta, Portfolio, Profile, Query, ResultMeta, SummaryReply, Target, Weights } from "./api";
 import { api } from "./api";
+import Answer, { type NextStep } from "./components/Answer";
+import AskBox from "./components/AskBox";
 import Controls from "./components/Controls";
 import { GapTable, PortfolioList } from "./components/Coverage";
 import GridMap, { type MapLayer, type ScoreRange } from "./components/GridMap";
 import MethodView from "./components/MethodView";
 import RankedList from "./components/RankedList";
+import SearchSentence from "./components/SearchSentence";
 import SitePicker from "./components/SitePicker";
 import SiteSheet from "./components/SiteSheet";
 import { getLang, type Lang, setLang, t } from "./i18n";
@@ -25,6 +28,26 @@ const TOP_N = 25;
 const TOP_SEPARATION_KM = 300;
 const DEBOUNCE_MS = 150;
 const COLOR_SCALE_FLOOR = 0.9; // the lowest 10 percent of scores share the bottom color
+const EMPHASIS_WEIGHT = 4; // the weight of the feature a search gives more importance to
+const SUMMARY_DELAY_MS = 700; // wait for the controls to settle before asking for a new answer
+const MAP_PINS = 10; // how many of the listed places get a numbered pin
+const NO_PARTS: ReadonlySet<string> = new Set();
+
+/** Everything a search is made of, kept so a question or a refinement can be undone. */
+interface Snapshot {
+  target: Target;
+  profileId: string;
+  customWeights: Weights | null;
+  emphasis: string | null;
+  presetId: string | null;
+  drawnBbox: Bbox | null;
+  terrain: string[];
+  minConfidence: number;
+}
+
+function emphasized(profile: Profile, key: string): Weights {
+  return { ...profile.weights, [key]: Math.max(EMPHASIS_WEIGHT, profile.weights[key] ?? 0) };
+}
 
 interface Boot {
   meta: Meta;
@@ -94,6 +117,18 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [gaps, setGaps] = useState<Gaps | null>(null);
 
+  // The search in plain words (spec FR-AI2). It only fills in the same state the controls hold.
+  const [emphasis, setEmphasis] = useState<string | null>(null);
+  const [previous, setPrevious] = useState<Snapshot | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [askProblem, setAskProblem] = useState<"not_understood" | "failed" | null>(null);
+  const [notApplied, setNotApplied] = useState<string[]>([]);
+  const [fromQuestion, setFromQuestion] = useState<ReadonlySet<string>>(NO_PARTS);
+  const [askRound, setAskRound] = useState(0);
+  const [asked, setAsked] = useState(false);
+  const [summary, setSummary] = useState<SummaryReply | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
   const bbox = useMemo<Bbox | null>(() => {
     if (presetId === null) return drawnBbox;
     if (presetId === meta.region_presets[0]?.id) return null;
@@ -129,6 +164,30 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
       });
     return () => controller.abort();
   }, [query]);
+
+  // The answer follows the search: it is written again a moment after the controls settle.
+  useEffect(() => {
+    const controller = new AbortController();
+    setSummaryLoading(true);
+    const timer = window.setTimeout(() => {
+      api
+        .summary(query, { emphasis, region: presetId, lang, minSeparationKm: TOP_SEPARATION_KM }, controller.signal)
+        .then((reply) => {
+          setSummary(reply);
+          setSummaryLoading(false);
+        })
+        .catch((error: Error) => {
+          if (error.name === "AbortError") return;
+          // An API without /summary, or one that failed: the list still stands on its own.
+          setSummary(null);
+          setSummaryLoading(false);
+        });
+    }, SUMMARY_DELAY_MS);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, emphasis, presetId, lang]);
 
   // The portfolio and the gap map load only while their tab is open (spec FR-W13).
   useEffect(() => {
@@ -203,14 +262,170 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
 
   const weights = customWeights ?? profile.weights;
 
+  const snapshot = (): Snapshot => ({
+    target,
+    profileId,
+    customWeights,
+    emphasis,
+    presetId,
+    drawnBbox,
+    terrain,
+    minConfidence,
+  });
+
+  const restore = (saved: Snapshot) => {
+    setTarget(saved.target);
+    setProfileId(saved.profileId);
+    setCustomWeights(saved.customWeights);
+    setEmphasis(saved.emphasis);
+    setPresetId(saved.presetId);
+    setDrawnBbox(saved.drawnBbox);
+    setTerrain(saved.terrain);
+    setMinConfidence(saved.minConfidence);
+    setSelected(null);
+    setDrawing(false);
+  };
+
+  /** A change made by hand: remember the search before it, and drop the marks of the last question. */
+  const byHand = (change: () => void) => {
+    setPrevious(snapshot());
+    setFromQuestion(NO_PARTS);
+    setNotApplied([]);
+    setAskProblem(null);
+    change();
+  };
+
+  const chooseSite = (chosen: Target) => {
+    setTarget(chosen);
+    setProfileId(chosen.default_profile);
+    setCustomWeights(null);
+    setDebouncedWeights(null);
+    setEmphasis(null);
+    setSelected(null);
+  };
+
+  const chooseProfile = (id: string) => {
+    const next = profiles.find((p) => p.id === id);
+    if (!next) return;
+    setProfileId(id);
+    // A feature that is a gate in the new purpose cannot be stressed.
+    const kept = emphasis !== null && !(emphasis in next.gates) ? emphasis : null;
+    setEmphasis(kept);
+    setCustomWeights(kept ? emphasized(next, kept) : null);
+  };
+
+  const chooseEmphasis = (key: string | null) => {
+    setEmphasis(key);
+    setCustomWeights(key ? emphasized(profile, key) : null);
+  };
+
+  const choosePreset = (id: string) => {
+    if (id === "drawn") return;
+    setPresetId(id);
+    setDrawing(false);
+  };
+
+  const startOver = () => {
+    setPrevious(snapshot());
+    restore({
+      target: targets[0],
+      profileId: targets[0].default_profile,
+      customWeights: null,
+      emphasis: null,
+      presetId: meta.region_presets[0]?.id ?? null,
+      drawnBbox: null,
+      terrain: [],
+      minConfidence: 0,
+    });
+    setFromQuestion(NO_PARTS);
+    setNotApplied([]);
+    setAskProblem(null);
+    setAskRound((round) => round + 1);
+    setAsked(false);
+  };
+
+  const onAsk = async (text: string) => {
+    setAsking(true);
+    setAskProblem(null);
+    setAsked(true);
+    try {
+      const reply = await api.ask(text, lang, {
+        target: target.id,
+        profile: profileId,
+        emphasis,
+        region: presetId,
+        terrain,
+        minConfidence,
+      });
+      if (!reply.understood || !reply.plan) {
+        setAskProblem("not_understood");
+        return;
+      }
+      const plan = reply.plan;
+      const nextProfile = profiles.find((p) => p.id === plan.profile) ?? profile;
+      const stressed = plan.emphasis !== null && !(plan.emphasis in nextProfile.gates) ? plan.emphasis : null;
+      // A drawn area has no name the model could return, so it stays unless a region was asked for.
+      const nextPreset = plan.region ?? (presetId === null ? null : (meta.region_presets[0]?.id ?? null));
+      const parts = new Set<string>();
+      if (plan.target.id !== target.id) parts.add("site");
+      if (nextProfile.id !== profileId) parts.add("purpose");
+      if (stressed !== null) parts.add("focus");
+      if (nextPreset !== null && nextPreset !== meta.region_presets[0]?.id) parts.add("area");
+      if (plan.terrain.length > 0) parts.add("terrain");
+      if (parts.size === 0) parts.add("site");
+
+      setPrevious(snapshot());
+      setTarget(plan.target);
+      setProfileId(nextProfile.id);
+      setEmphasis(stressed);
+      setCustomWeights(stressed ? emphasized(nextProfile, stressed) : null);
+      setPresetId(nextPreset);
+      setTerrain(plan.terrain);
+      setMinConfidence(plan.min_confidence);
+      setSelected(null);
+      setDrawing(false);
+      setFromQuestion(parts);
+      setNotApplied(reply.not_applied);
+    } catch {
+      setAskProblem("failed");
+    } finally {
+      setAsking(false);
+    }
+  };
+
   const onChosen = useCallback((chosen: Target) => {
     setTarget(chosen);
     setProfileId(chosen.default_profile);
     setCustomWeights(null);
     setDebouncedWeights(null);
+    setEmphasis(null);
+    setFromQuestion(NO_PARTS);
+    setNotApplied([]);
     setSelected(null);
     setView("analogs");
   }, []);
+
+  // One-touch ways to refine the search, offered under the answer.
+  const nextSteps: NextStep[] = [];
+  if (terrain.length === 0) nextSteps.push({ label: "Only deserts", run: () => byHand(() => setTerrain(["arid"])) });
+  if (bbox !== null) {
+    nextSteps.push({ label: "Search the whole Earth", run: () => byHand(() => choosePreset(meta.region_presets[0].id)) });
+  }
+  if (emphasis !== "aridity" && features.some((f) => f.key === "aridity") && !("aridity" in profile.gates)) {
+    nextSteps.push({ label: "Make it drier", run: () => byHand(() => chooseEmphasis("aridity")) });
+  }
+  if (profileId !== "landing_site" && profiles.some((p) => p.id === "landing_site")) {
+    nextSteps.push({ label: "What about a landing site?", run: () => byHand(() => chooseProfile("landing_site")) });
+  }
+
+  const emphasisFeatures = features.filter(
+    (feature) => !(feature.key in profile.gates) && feature.comparable_across_bodies !== false,
+  );
+  // The first places of the list get numbered pins, so the list and the map read together.
+  const pins = useMemo(
+    () => (resultTab === "portfolio" ? (portfolio?.cells ?? NO_CELLS) : resultTab === "list" ? top.slice(0, MAP_PINS) : NO_CELLS),
+    [resultTab, portfolio, top],
+  );
 
   const onDrawn = useCallback((drawn: Bbox) => {
     setDrawnBbox(drawn);
@@ -262,58 +477,55 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
       {resultError && <div className="error-banner">{t("Could not load results: {error}", { error: resultError })}</div>}
 
       <div className={`workspace ${view === "analogs" ? "" : "hidden"}`}>
-        <Controls
-          meta={meta}
-          profiles={profiles}
-          features={features}
-          target={target}
-          profile={profile}
-          weights={weights}
-          customized={customWeights !== null}
-          beyondShare={resultMeta?.beyond_earth_weight_share ?? 0}
-          presetId={presetId}
-          terrain={terrain}
-          minConfidence={minConfidence}
-          drawing={drawing}
-          onChangeSite={() => setView("picker")}
-          onProfile={(id) => {
-            setProfileId(id);
-            setCustomWeights(null);
-          }}
-          onWeight={(key, value) => setCustomWeights({ ...weights, [key]: value })}
-          onResetWeights={() => setCustomWeights(null)}
-          onPreset={(id) => {
-            setPresetId(id);
-            setDrawing(false);
-          }}
-          onToggleDraw={() => setDrawing((value) => !value)}
-          onTerrain={setTerrain}
-          onMinConfidence={setMinConfidence}
-        />
-
-        <GridMap
-          meta={meta}
-          cells={cells}
-          range={range}
-          analogs={analogs}
-          selected={selected}
-          hovered={hovered}
-          bbox={bbox}
-          drawing={drawing}
-          visible={view === "analogs"}
-          layer={mapLayer}
-          portfolio={portfolio?.cells ?? NO_CELLS}
-          onLayer={setMapLayer}
-          onSelect={setSelected}
-          onHover={setHovered}
-          onDrawn={onDrawn}
-        />
-
-        <aside className="panel results" aria-label={t("Results")}>
+        <aside className="panel side" aria-label={t("Search and results")}>
           {selected ? (
             <SiteSheet sheet={sheet} target={target} error={sheetError} onClose={() => setSelected(null)} />
           ) : (
             <>
+              {meta.ai?.available && (
+                <AskBox
+                  key={askRound}
+                  busy={asking}
+                  problem={askProblem}
+                  showIdeas={!asked}
+                  onAsk={onAsk}
+                />
+              )}
+              <SearchSentence
+                meta={meta}
+                presets={targets}
+                target={target}
+                profiles={profiles}
+                profile={profile}
+                features={emphasisFeatures}
+                emphasis={emphasis}
+                customized={customWeights !== null}
+                presetId={presetId}
+                terrain={terrain}
+                fromQuestion={fromQuestion}
+                notApplied={notApplied}
+                canUndo={previous !== null}
+                onArea={(id) => byHand(() => choosePreset(id))}
+                onSite={(id) => {
+                  const preset = targets.find((item) => item.id === id);
+                  if (preset && preset.id !== target.id) byHand(() => chooseSite(preset));
+                }}
+                onPickSite={() => setView("picker")}
+                onProfile={(id) => byHand(() => chooseProfile(id))}
+                onEmphasis={(key) => byHand(() => chooseEmphasis(key))}
+                onTerrain={(next) => byHand(() => setTerrain(next))}
+                onUndo={() => {
+                  if (!previous) return;
+                  restore(previous);
+                  setPrevious(null);
+                  setFromQuestion(NO_PARTS);
+                  setNotApplied([]);
+                  setAskProblem(null);
+                }}
+                onStartOver={startOver}
+              />
+              <Answer summary={summary} loading={summaryLoading} nextSteps={nextSteps.slice(0, 3)} />
+
               <div className="segmented result-tabs" role="group" aria-label={t("Results")}>
                 {RESULT_TABS.map(([id, label]) => (
                   <button
@@ -333,6 +545,7 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
               {resultTab === "list" && (
                 <RankedList
                   cells={top}
+                  features={features}
                   meta={resultMeta}
                   hovered={hovered}
                   printTitle={t("Earth analogs of {site}, for {purpose}", { site: t(target.name), purpose: t(profile.label) })}
@@ -341,9 +554,56 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
                   onHover={setHovered}
                 />
               )}
+
+              <details className="advanced">
+                <summary>{t("Advanced settings: site values, weights, drawn area and confidence")}</summary>
+                <Controls
+                  meta={meta}
+                  profiles={profiles}
+                  features={features}
+                  target={target}
+                  profile={profile}
+                  weights={weights}
+                  customized={customWeights !== null}
+                  beyondShare={resultMeta?.beyond_earth_weight_share ?? 0}
+                  presetId={presetId}
+                  terrain={terrain}
+                  minConfidence={minConfidence}
+                  drawing={drawing}
+                  onChangeSite={() => setView("picker")}
+                  onProfile={chooseProfile}
+                  onWeight={(key, value) => {
+                    setEmphasis(null);
+                    setCustomWeights({ ...weights, [key]: value });
+                  }}
+                  onResetWeights={() => chooseEmphasis(null)}
+                  onPreset={choosePreset}
+                  onToggleDraw={() => setDrawing((value) => !value)}
+                  onTerrain={setTerrain}
+                  onMinConfidence={setMinConfidence}
+                />
+              </details>
             </>
           )}
         </aside>
+
+        <GridMap
+          meta={meta}
+          cells={cells}
+          range={range}
+          analogs={analogs}
+          selected={selected}
+          hovered={hovered}
+          bbox={bbox}
+          drawing={drawing}
+          visible={view === "analogs"}
+          layer={mapLayer}
+          portfolio={pins}
+          onLayer={setMapLayer}
+          onSelect={setSelected}
+          onHover={setHovered}
+          onDrawn={onDrawn}
+        />
       </div>
 
       {view === "picker" && (

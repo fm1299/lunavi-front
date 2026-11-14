@@ -56,3 +56,8 @@ export const TERRAIN_CHIPS = [
   { id: "volcanic", label: "Volcanic" },
   { id: "other", label: "Other" },
 ];
+
+/** For a label used in the middle of a sentence: "Rover mobility" reads as "rover mobility". */
+export function lowerFirst(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}

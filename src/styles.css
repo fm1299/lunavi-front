@@ -168,7 +168,7 @@ nav {
 .workspace {
   grid-row: 3;
   display: grid;
-  grid-template-columns: 310px minmax(0, 1fr) 360px;
+  grid-template-columns: 440px minmax(0, 1fr);
   min-height: 0;
 }
 
@@ -985,17 +985,7 @@ select {
   }
 
   .workspace {
-    grid-template-columns: 280px minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) 280px;
-  }
-
-  .controls {
-    grid-row: 1 / span 2;
-  }
-
-  .results {
-    border-left: 0;
-    border-top: 1px solid var(--line);
+    grid-template-columns: 360px minmax(0, 1fr);
   }
 
 }
@@ -1021,17 +1011,13 @@ select {
     grid-template-rows: auto;
   }
 
-  .controls {
-    grid-row: auto;
+  .side {
     border-right: 0;
+    overflow-y: visible;
   }
 
   .map-shell {
     height: 60vh;
-  }
-
-  .results {
-    max-height: 70vh;
   }
 }
 
@@ -1075,6 +1061,10 @@ select {
 
   .topbar nav,
   .lang-switch,
+  .ask,
+  .sentence-card,
+  .answer,
+  .advanced,
   .controls,
   .map-shell,
   .export-row,
@@ -1216,4 +1206,193 @@ select {
   .result-tabs {
     display: none;
   }
+}
+
+/* Search in plain words (spec FR-AI2): a question, the search as a sentence, and an answer. */
+.side {
+  border-right: 1px solid var(--line);
+}
+
+.ask,
+.sentence-card {
+  padding: 14px 16px 0;
+  display: grid;
+  gap: 8px;
+}
+
+.ask-title {
+  font-size: 19px;
+}
+
+.ask-box {
+  display: flex;
+  gap: 8px;
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 5px 5px 5px 12px;
+}
+
+.ask-box:focus-within {
+  border-color: var(--accent);
+}
+
+.ask-box input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  outline: none;
+  padding: 5px 0;
+}
+
+.ask-box input::placeholder {
+  color: var(--muted);
+}
+
+.ask-ideas {
+  display: grid;
+  gap: 6px;
+}
+
+.ask-ideas .field-label {
+  margin-bottom: 0;
+}
+
+.ask-idea {
+  text-align: left;
+  background: var(--panel-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ask-idea:hover {
+  border-color: var(--accent);
+}
+
+.ask-idea:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.ask-problem {
+  font-size: 13px;
+  border: 1px solid rgba(255, 143, 112, 0.5);
+  background: rgba(255, 143, 112, 0.08);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.sentence-card .field-label {
+  margin-bottom: 0;
+}
+
+.sentence {
+  font-size: 16px;
+  line-height: 2.1;
+}
+
+select.token {
+  appearance: none;
+  -webkit-appearance: none;
+  max-width: 100%;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 1px 26px 1px 8px;
+  border-radius: 8px;
+  background: var(--panel-raised)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23f2a65a' stroke-width='1.6'/%3E%3C/svg%3E")
+    no-repeat right 9px center;
+}
+
+select.token:hover {
+  border-color: var(--accent);
+}
+
+/* A word the last question filled in. */
+select.token-set {
+  background-color: var(--accent-soft);
+  border-color: rgba(242, 166, 90, 0.5);
+  font-weight: 600;
+}
+
+.sentence-skipped {
+  font-size: 13px;
+  color: var(--muted);
+  border-left: 2px solid var(--line);
+  padding-left: 10px;
+}
+
+.sentence-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 13px;
+}
+
+.answer {
+  margin: 14px 16px 0;
+  border: 1px solid rgba(242, 166, 90, 0.4);
+  background: var(--accent-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.answer-loading > p:first-child {
+  color: var(--muted);
+}
+
+.answer-next {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.answer-next button {
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.answer-next button:hover {
+  border-color: var(--accent);
+}
+
+.answer-foot {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.side > .result-tabs {
+  margin: 14px 16px 0;
+}
+
+.rank-why {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.advanced {
+  border-top: 1px solid var(--line);
+}
+
+.advanced > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 12px 16px;
+}
+
+.advanced .controls {
+  border-right: 0;
+  overflow: visible;
+  background: none;
 }

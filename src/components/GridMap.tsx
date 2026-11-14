@@ -28,7 +28,7 @@ interface Props {
   drawing: boolean;
   visible: boolean;
   layer: MapLayer;
-  /** Portfolio cells, shown as numbered pins (spec FR-W13). */
+  /** Cells shown as numbered pins: the first places of the list, or the portfolio (spec FR-W13). */
   portfolio: FullCell[];
   onLayer: (layer: MapLayer) => void;
   onSelect: (id: string) => void;
@@ -299,7 +299,7 @@ export default function GridMap(props: Props) {
     };
   }, [analogs]);
 
-  // Numbered pins for the portfolio cells.
+  // Numbered pins for the listed places or the portfolio cells.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -405,7 +405,7 @@ export default function GridMap(props: Props) {
         </div>
         <p>
           {mapLayer === "score"
-            ? t("Brighter cells are more similar. Faint cells have lower confidence. Pins are documented analogs.")
+            ? t("Brighter cells are more similar. Faint cells have lower confidence. Numbered pins are the places in the list; plain pins are documented analogs.")
             : t("Brighter cells are closer to a road and an airport. Access never changes the score.")}
         </p>
       </div>
