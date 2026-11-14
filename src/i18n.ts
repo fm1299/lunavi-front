@@ -187,6 +187,35 @@ const ES: Record<string, string> = {
   "Print this list, or save it as a PDF": "Imprimir esta lista o guardarla como PDF",
   "Earth analogs of {site}, for {purpose}": "Análogos terrestres de {site}, para {purpose}",
 
+  // Access, portfolio and gaps
+  "Map layer": "Capa del mapa",
+  Access: "Acceso",
+  Remote: "Remoto",
+  "Easy to reach": "Fácil de llegar",
+  "Brighter cells are closer to a road and an airport. Access never changes the score.":
+    "Las celdas más brillantes están más cerca de una carretera y de un aeropuerto. El acceso nunca cambia el puntaje.",
+  "Access {percent}%": "Acceso {percent}%",
+  "{road} km to a road and {airport} km to an airport, in a straight line.":
+    "{road} km a una carretera y {airport} km a un aeropuerto, en línea recta.",
+  List: "Lista",
+  Portfolio: "Portafolio",
+  Gaps: "Vacíos",
+  "Loading…": "Cargando…",
+  "The fewest cells that together cover this site's weighted conditions. A cell covers a condition at {percent}% similarity or more. Numbered pins show them on the map.":
+    "El menor grupo de celdas que, juntas, cubren las condiciones con peso de este sitio. Una celda cubre una condición con {percent}% de similitud o más. Los pines numerados las muestran en el mapa.",
+  "No cell covers any condition with these filters.": "Ninguna celda cubre alguna condición con estos filtros.",
+  "Covers:": "Cubre:",
+  "Not covered by any cell:": "Ninguna celda cubre:",
+  "For each condition of this site, whether a documented analog matches it at {percent}% similarity or more. A gap is a condition that no documented analog reproduces.":
+    "Para cada condición de este sitio, si algún análogo documentado la iguala con {percent}% de similitud o más. Un vacío es una condición que ningún análogo documentado reproduce.",
+  "{count} documented analogs lie in the Earth table.": "{count} análogos documentados están en la tabla de la Tierra.",
+  Condition: "Condición",
+  Status: "Estado",
+  "Closest analog": "Análogo más cercano",
+  Covered: "Cubierta",
+  Gap: "Vacío",
+  "Cannot be judged": "No se puede evaluar",
+
   // Site sheet
   "← Back to list": "← Volver a la lista",
   "Loading site sheet…": "Cargando la ficha de sitio…",

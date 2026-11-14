@@ -183,6 +183,16 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
         </details>
       )}
 
+      {sheet.access !== null && sheet.road_km !== null && sheet.airport_km !== null && (
+        <p className="hint">
+          <strong>{t("Access {percent}%", { percent: Math.round(sheet.access * 100) })}:</strong>{" "}
+          {t("{road} km to a road and {airport} km to an airport, in a straight line.", {
+            road: Math.round(sheet.road_km),
+            airport: Math.round(sheet.airport_km),
+          })}
+        </p>
+      )}
+
       <h3>{t("What to test here")}</h3>
       <ul className="tags">
         {sheet.test_tags.map((tag) => (

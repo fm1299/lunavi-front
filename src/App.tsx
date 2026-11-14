@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { Analog, Bbox, CellSheet, CompactCells, Feature, FullCell, Meta, Profile, Query, ResultMeta, Target, Weights } from "./api";
+import type { Analog, Bbox, CellSheet, CompactCells, Feature, FullCell, Gaps, Meta, Portfolio, Profile, Query, ResultMeta, Target, Weights } from "./api";
 import { api } from "./api";
 import Controls from "./components/Controls";
-import GridMap, { type ScoreRange } from "./components/GridMap";
+import { GapTable, PortfolioList } from "./components/Coverage";
+import GridMap, { type MapLayer, type ScoreRange } from "./components/GridMap";
 import MethodView from "./components/MethodView";
 import RankedList from "./components/RankedList";
 import SitePicker from "./components/SitePicker";
@@ -11,6 +12,14 @@ import SiteSheet from "./components/SiteSheet";
 import { getLang, type Lang, setLang, t } from "./i18n";
 
 type View = "analogs" | "picker" | "method";
+type ResultTab = "list" | "portfolio" | "gaps";
+
+const RESULT_TABS: [ResultTab, string][] = [
+  ["list", "List"],
+  ["portfolio", "Portfolio"],
+  ["gaps", "Gaps"],
+];
+const NO_CELLS: FullCell[] = [];
 
 const TOP_N = 25;
 const TOP_SEPARATION_KM = 300;
@@ -80,6 +89,10 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
   const [resultError, setResultError] = useState<string | null>(null);
   const [sheet, setSheet] = useState<CellSheet | null>(null);
   const [sheetError, setSheetError] = useState<string | null>(null);
+  const [mapLayer, setMapLayer] = useState<MapLayer>("score");
+  const [resultTab, setResultTab] = useState<ResultTab>("list");
+  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const [gaps, setGaps] = useState<Gaps | null>(null);
 
   const bbox = useMemo<Bbox | null>(() => {
     if (presetId === null) return drawnBbox;
@@ -116,6 +129,35 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
       });
     return () => controller.abort();
   }, [query]);
+
+  // The portfolio and the gap map load only while their tab is open (spec FR-W13).
+  useEffect(() => {
+    if (resultTab !== "portfolio") {
+      setPortfolio(null);
+      return;
+    }
+    const controller = new AbortController();
+    api
+      .portfolio(query, controller.signal)
+      .then(setPortfolio)
+      .catch((error: Error) => {
+        if (error.name !== "AbortError") setResultError(error.message);
+      });
+    return () => controller.abort();
+  }, [resultTab, query]);
+
+  useEffect(() => {
+    if (resultTab !== "gaps") return;
+    const controller = new AbortController();
+    setGaps(null);
+    api
+      .gaps(target.id, controller.signal)
+      .then(setGaps)
+      .catch((error: Error) => {
+        if (error.name !== "AbortError") setResultError(error.message);
+      });
+    return () => controller.abort();
+  }, [resultTab, target.id, target.climate_status]);
 
   // Mars temperature arrives after the site opens, so the user is not left waiting for it.
   useEffect(() => {
@@ -259,6 +301,9 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
           bbox={bbox}
           drawing={drawing}
           visible={view === "analogs"}
+          layer={mapLayer}
+          portfolio={portfolio?.cells ?? NO_CELLS}
+          onLayer={setMapLayer}
           onSelect={setSelected}
           onHover={setHovered}
           onDrawn={onDrawn}
@@ -268,15 +313,35 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
           {selected ? (
             <SiteSheet sheet={sheet} target={target} error={sheetError} onClose={() => setSelected(null)} />
           ) : (
-            <RankedList
-              cells={top}
-              meta={resultMeta}
-              hovered={hovered}
-              printTitle={t("Earth analogs of {site}, for {purpose}", { site: t(target.name), purpose: t(profile.label) })}
-              csvUrl={api.exportUrl(query, TOP_N, TOP_SEPARATION_KM)}
-              onSelect={setSelected}
-              onHover={setHovered}
-            />
+            <>
+              <div className="segmented result-tabs" role="group" aria-label={t("Results")}>
+                {RESULT_TABS.map(([id, label]) => (
+                  <button
+                    key={id}
+                    className={resultTab === id ? "active" : ""}
+                    aria-pressed={resultTab === id}
+                    onClick={() => setResultTab(id)}
+                  >
+                    {t(label)}
+                  </button>
+                ))}
+              </div>
+              {resultTab === "portfolio" && (
+                <PortfolioList portfolio={portfolio} features={features} onSelect={setSelected} onHover={setHovered} />
+              )}
+              {resultTab === "gaps" && <GapTable gaps={gaps} features={features} />}
+              {resultTab === "list" && (
+                <RankedList
+                  cells={top}
+                  meta={resultMeta}
+                  hovered={hovered}
+                  printTitle={t("Earth analogs of {site}, for {purpose}", { site: t(target.name), purpose: t(profile.label) })}
+                  csvUrl={api.exportUrl(query, TOP_N, TOP_SEPARATION_KM)}
+                  onSelect={setSelected}
+                  onHover={setHovered}
+                />
+              )}
+            </>
           )}
         </aside>
       </div>

@@ -1,7 +1,7 @@
 import L from "leaflet";
 import { useEffect, useRef } from "react";
 
-import type { Analog, Bbox, CompactCells, Meta } from "../api";
+import type { Analog, Bbox, CompactCells, FullCell, Meta } from "../api";
 import { cellId } from "../api";
 import { formatCoord, viridis } from "../format";
 import { t } from "../i18n";
@@ -9,6 +9,8 @@ import { t } from "../i18n";
 const GIBS_URL = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best";
 const MIN_HIGHLIGHT_PX = 12;
 const FOCUS_ZOOM = 5;
+
+export type MapLayer = "score" | "access";
 
 export interface ScoreRange {
   min: number;
@@ -25,6 +27,10 @@ interface Props {
   bbox: Bbox | null;
   drawing: boolean;
   visible: boolean;
+  layer: MapLayer;
+  /** Portfolio cells, shown as numbered pins (spec FR-W13). */
+  portfolio: FullCell[];
+  onLayer: (layer: MapLayer) => void;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
   onDrawn: (bbox: Bbox) => void;
@@ -42,6 +48,7 @@ class CellCanvas extends L.Layer {
   lookup = new Map<string, number>();
   range: ScoreRange = { min: 0, max: 100 };
   resolution = 0.5;
+  layer: MapLayer = "score";
   selected: string | null = null;
   hovered: string | null = null;
 
@@ -103,12 +110,17 @@ class CellCanvas extends L.Layer {
     if (context && this.cells) {
       const size = map.getSize();
       const box = this.projector(map);
-      const { lat, lon, score, confidence } = this.cells;
+      const { lat, lon, score, confidence, access } = this.cells;
       const spread = Math.max(this.range.max - this.range.min, 1);
       for (let i = 0; i < lat.length; i++) {
         const { x, y, w, h } = box(lat[i], lon[i]);
         if (x > size.x || y > size.y || x + w < 0 || y + h < 0) continue;
-        if (score[i] <= 0) {
+        if (this.layer === "access") {
+          // Access is about reaching the cell, so it does not depend on the score or the gate.
+          const value = access[i];
+          context.globalAlpha = value === null ? 0.28 : 0.85;
+          context.fillStyle = value === null ? "#3b4350" : viridis(value);
+        } else if (score[i] <= 0) {
           // Vetoed by the gate: visible, but clearly not a candidate.
           context.globalAlpha = 0.28;
           context.fillStyle = "#3b4350";
@@ -147,7 +159,7 @@ class CellCanvas extends L.Layer {
 }
 
 export default function GridMap(props: Props) {
-  const { meta, cells, range, analogs, selected, hovered, bbox, drawing, visible } = props;
+  const { meta, cells, range, analogs, selected, hovered, bbox, drawing, visible, layer: mapLayer, portfolio } = props;
   const element = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<CellCanvas | null>(null);
@@ -204,7 +216,10 @@ export default function GridMap(props: Props) {
         tip.innerHTML =
           `<strong>${vetoed ? t("Vegetation gate") : t("Score {score}", { score: data.score[index].toFixed(1) })}</strong>` +
           `<span>${formatCoord(data.lat[index], data.lon[index])}</span>` +
-          `<span>${t("Confidence {percent}%", { percent: (data.confidence[index] * 100).toFixed(0) })}</span>`;
+          `<span>${t("Confidence {percent}%", { percent: (data.confidence[index] * 100).toFixed(0) })}</span>` +
+          (data.access[index] === null
+            ? ""
+            : `<span>${t("Access {percent}%", { percent: Math.round(data.access[index]! * 100) })}</span>`);
       } else {
         tip.style.display = "none";
       }
@@ -237,8 +252,9 @@ export default function GridMap(props: Props) {
       layer.cells = cells;
     }
     layer.range = range;
+    layer.layer = mapLayer;
     layer.draw();
-  }, [cells, range]);
+  }, [cells, range, mapLayer]);
 
   // Hovering and selecting only touch the highlight canvas.
   useEffect(() => {
@@ -282,6 +298,23 @@ export default function GridMap(props: Props) {
       group.remove();
     };
   }, [analogs]);
+
+  // Numbered pins for the portfolio cells.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const group = L.layerGroup(
+      portfolio.map((cell, index) =>
+        L.marker([cell.lat, cell.lon], {
+          icon: L.divIcon({ className: "portfolio-pin", html: String(index + 1), iconSize: [22, 22] }),
+          keyboard: false,
+        }).on("click", () => handlers.current.onSelect(cell.cell_id)),
+      ),
+    ).addTo(map);
+    return () => {
+      group.remove();
+    };
+  }, [portfolio]);
 
   // Show the active area, and fit the view to it.
   useEffect(() => {
@@ -352,13 +385,29 @@ export default function GridMap(props: Props) {
       <div ref={element} className="map" role="application" aria-label={t("Map of Earth cells colored by analog score")} />
       <div ref={tipRef} className="map-tip" />
       <div className="legend">
+        <div className="segmented legend-layers" role="group" aria-label={t("Map layer")}>
+          {(["score", "access"] as const).map((option) => (
+            <button
+              key={option}
+              className={mapLayer === option ? "active" : ""}
+              aria-pressed={mapLayer === option}
+              onClick={() => props.onLayer(option)}
+            >
+              {option === "score" ? t("Score") : t("Access")}
+            </button>
+          ))}
+        </div>
         <div className="legend-bar" />
         <div className="legend-scale">
-          <span>{range.min.toFixed(0)}</span>
-          <span>{t("Score")}</span>
-          <span>{range.max.toFixed(0)}</span>
+          <span>{mapLayer === "score" ? range.min.toFixed(0) : t("Remote")}</span>
+          <span>{mapLayer === "score" ? t("Score") : t("Access")}</span>
+          <span>{mapLayer === "score" ? range.max.toFixed(0) : t("Easy to reach")}</span>
         </div>
-        <p>{t("Brighter cells are more similar. Faint cells have lower confidence. Pins are documented analogs.")}</p>
+        <p>
+          {mapLayer === "score"
+            ? t("Brighter cells are more similar. Faint cells have lower confidence. Pins are documented analogs.")
+            : t("Brighter cells are closer to a road and an airport. Access never changes the score.")}
+        </p>
       </div>
     </div>
   );

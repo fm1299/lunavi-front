@@ -1118,3 +1118,102 @@ select {
     background: #fff !important; /* a hovered row is dark on screen */
   }
 }
+
+/* Access layer, portfolio and gaps (spec FR-W13) */
+.legend-layers {
+  margin: 0 0 8px;
+}
+
+.legend-layers button,
+.result-tabs button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.result-tabs {
+  grid-template-columns: repeat(3, 1fr);
+  margin: 10px 16px 0;
+}
+
+.rank-covers {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.coverage-note {
+  margin: 10px 16px;
+}
+
+.portfolio-pin {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  color: #0d1117;
+  border: 2px solid #0d1117;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gap-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.gap-table th,
+.gap-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 8px 8px 8px 16px;
+  border-bottom: 1px solid var(--line);
+  font-weight: 400;
+}
+
+.gap-table thead th {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.gap-value {
+  display: block;
+  font-size: 12px;
+}
+
+.gap-state {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.gap-state::before {
+  content: "● ";
+}
+
+.gap-covered {
+  color: #6dcd59;
+}
+
+.gap-gap {
+  color: #f2a65a;
+}
+
+.gap-gap::before {
+  content: "▲ ";
+}
+
+.gap-unknown {
+  color: var(--muted);
+}
+
+.gap-unknown::before {
+  content: "○ ";
+}
+
+@media print {
+  .result-tabs {
+    display: none;
+  }
+}

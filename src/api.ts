@@ -96,6 +96,8 @@ export interface CompactCells {
   lon: number[];
   score: number[];
   confidence: number[];
+  /** Null in an Earth table built before the access layer existed. */
+  access: (number | null)[];
 }
 
 export interface FullCell {
@@ -107,6 +109,31 @@ export interface FullCell {
   score: number;
   confidence: number;
   band: Band;
+  access: number | null;
+  road_km: number | null;
+  airport_km: number | null;
+}
+
+export interface Portfolio {
+  threshold: number;
+  cells: (FullCell & { covers: string[] })[];
+  conditions: string[];
+  uncovered: string[];
+}
+
+export interface Gaps {
+  threshold: number;
+  analogs_compared: number;
+  conditions: {
+    key: string;
+    label: string;
+    target_value: number | string | null;
+    beyond_earth: boolean;
+    covered: boolean | null;
+    best_analog: string | null;
+    best_s: number | null;
+    covered_by: string[];
+  }[];
 }
 
 export interface BreakdownRow {
@@ -200,6 +227,8 @@ export const api = {
     params.set("min_separation_km", String(minSeparationKm));
     return `${API_URL}/export?${params}`;
   },
+  portfolio: (query: Query, signal?: AbortSignal) => get<Portfolio>("/portfolio", resultParams(query), signal),
+  gaps: (target: string, signal?: AbortSignal) => get<Gaps>("/gaps", new URLSearchParams({ target }), signal),
   cell: (cellId: string, query: Pick<Query, "target" | "profile" | "weights">, signal?: AbortSignal) => {
     const params = new URLSearchParams({ target: query.target, profile: query.profile });
     if (query.weights) params.set("weights", weightsParam(query.weights));
