@@ -1,5 +1,6 @@
 import type { BreakdownRow, CellSheet, Target } from "../api";
 import { BAND_LABEL, formatCoord, formatValue, viridis } from "../format";
+import { t } from "../i18n";
 
 interface Props {
   sheet: CellSheet | null;
@@ -23,7 +24,7 @@ function Radar({ rows, target }: { rows: BreakdownRow[]; target: Target }) {
     axes.map((row, index) => point(index, row[key] as number).join(",")).join(" ");
   return (
     <figure className="radar">
-      <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`Candidate compared with ${target.name}`}>
+      <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={t("Candidate compared with {name}", { name: t(target.name) })}>
         {[0.25, 0.5, 0.75, 1].map((ring) => (
           <polygon
             key={ring}
@@ -38,7 +39,7 @@ function Radar({ rows, target }: { rows: BreakdownRow[]; target: Target }) {
             <g key={row.key}>
               <line x1={center} y1={center} x2={x} y2={y} className="radar-ring" />
               <text x={labelX} y={labelY} className="radar-label" textAnchor="middle" dominantBaseline="middle">
-                {row.label.split(" ")[0]}
+                {t(row.label).split(" ")[0]}
               </text>
             </g>
           );
@@ -47,15 +48,15 @@ function Radar({ rows, target }: { rows: BreakdownRow[]; target: Target }) {
         <polygon points={polygon("cell_z")} className="radar-cell" />
       </svg>
       <figcaption>
-        <span className="key key-target" /> {target.name}
-        <span className="key key-cell" /> This cell
+        <span className="key key-target" /> {t(target.name)}
+        <span className="key key-cell" /> {t("This cell")}
       </figcaption>
     </figure>
   );
 }
 
 function labels(keys: string[], rows: BreakdownRow[]) {
-  return keys.map((key) => rows.find((row) => row.key === key)?.label ?? key).join(", ") || "None";
+  return keys.map((key) => t(rows.find((row) => row.key === key)?.label ?? key)).join(", ") || t("None");
 }
 
 function hostname(url: string): string {
@@ -71,13 +72,13 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
     return (
       <div className="sheet">
         <button className="link-button" onClick={onClose}>
-          ← Back to list
+          {t("← Back to list")}
         </button>
         <p className="empty">{error}</p>
       </div>
     );
   }
-  if (!sheet) return <div className="sheet"><p className="empty">Loading site sheet…</p></div>;
+  if (!sheet) return <div className="sheet"><p className="empty">{t("Loading site sheet…")}</p></div>;
 
   const rows = sheet.breakdown;
   const active = rows.filter((row) => row.weight > 0);
@@ -89,91 +90,92 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
   return (
     <div className="sheet">
       <button className="link-button" onClick={onClose}>
-        ← Back to list
+        {t("← Back to list")}
       </button>
       <header className="sheet-header">
-        <h2>{sheet.country ?? "Unnamed area"}</h2>
+        <h2>{sheet.country ?? t("Unnamed area")}</h2>
         <p className="muted">{formatCoord(sheet.lat, sheet.lon)}</p>
         <div className="sheet-score">
           <strong>{sheet.score.toFixed(1)}</strong>
-          <span>of 100, compared with {target.name}</span>
+          <span>{t("of 100, compared with {name}", { name: t(target.name) })}</span>
         </div>
         <div className="rank-meta">
           <span className={`band band-${sheet.band}`}>
-            {BAND_LABEL[sheet.band]} confidence ({Math.round(sheet.confidence * 100)}%)
+            {t("{band} confidence", { band: t(BAND_LABEL[sheet.band]) })} ({Math.round(sheet.confidence * 100)}%)
           </span>
           {sheet.terrain.map((terrain) => (
             <span key={terrain} className="chip-static">
-              {terrain}
+              {t(terrain)}
             </span>
           ))}
         </div>
       </header>
 
-      {!sheet.eligible && <p className="warning">This cell does not meet any terrain class, so it is outside the ranking.</p>}
+      {!sheet.eligible && <p className="warning">{t("This cell does not meet any terrain class, so it is outside the ranking.")}</p>}
       {sheet.score === 0 && sheet.eligible && (
-        <p className="warning">Score 0: this cell fails the vegetation gate, so it is too green to be an analog.</p>
+        <p className="warning">{t("Score 0: this cell fails the vegetation gate, so it is too green to be an analog.")}</p>
       )}
 
       <div className="match-grid">
         <div>
-          <h3>Closest matches</h3>
+          <h3>{t("Closest matches")}</h3>
           <p>{labels(sheet.closest_matches, rows)}</p>
         </div>
         <div>
-          <h3>Weakest matches</h3>
+          <h3>{t("Weakest matches")}</h3>
           <p>{labels(sheet.weakest_matches, rows)}</p>
         </div>
       </div>
 
       {sheet.missing_features.length > 0 && (
         <p className="hint">
-          <strong>No data yet:</strong> {labels(sheet.missing_features, rows)}. These are left out of the score and lower
-          confidence. Event data can fill them later.
+          <strong>{t("No data yet:")}</strong> {labels(sheet.missing_features, rows)}.{" "}
+          {t("These are left out of the score and lower confidence. Event data can fill them later.")}
         </p>
       )}
 
       <Radar rows={rows} target={target} />
 
-      <h3>Breakdown</h3>
+      <h3>{t("Breakdown")}</h3>
       <ul className="breakdown">
         {active.map((row) => (
           <li key={row.key} title={row.target_note ?? undefined}>
             <div className="breakdown-head">
-              <span>{row.label}</span>
-              <span className="muted">weight {row.weight}</span>
+              <span>{t(row.label)}</span>
+              <span className="muted">{t("weight {weight}", { weight: row.weight })}</span>
             </div>
             <div className="bar" aria-hidden="true">
               <span style={{ width: `${(row.s ?? 0) * 100}%`, background: viridis(row.s ?? 0) }} />
             </div>
             <div className="breakdown-values">
-              <span>Cell {formatValue(row.cell_value, row.unit)}</span>
+              <span>{t("Cell {value}", { value: formatValue(row.cell_value, row.unit) })}</span>
               <span>
-                Site {formatValue(row.target_value, row.unit)}
-                {row.target_basis && <span className={`basis basis-${row.target_basis}`}>{row.target_basis}</span>}
+                {t("Site {value}", { value: formatValue(row.target_value, row.unit) })}
+                {row.target_basis && <span className={`basis basis-${row.target_basis}`}>{t(row.target_basis)}</span>}
               </span>
             </div>
-            {row.beyond_earth && <p className="flag-note">Beyond Earth: this is only as close as Earth gets.</p>}
+            {row.beyond_earth && <p className="flag-note">{t("Beyond Earth: this is only as close as Earth gets.")}</p>}
           </li>
         ))}
       </ul>
 
       {sheet.beyond_earth_weight_share > 0 && (
         <p className="beyond-note">
-          <strong>{Math.round(sheet.beyond_earth_weight_share * 100)}%</strong> of the active weight rests on values beyond Earth's range.
+          <strong>{Math.round(sheet.beyond_earth_weight_share * 100)}%</strong>{" "}
+          {t("of the active weight rests on values beyond Earth's range.")}
         </p>
       )}
 
       {inactive.length > 0 && (
         <details className="stats-card">
-          <summary>Other values for this cell</summary>
+          <summary>{t("Other values for this cell")}</summary>
           <table>
             <tbody>
               {inactive.map((row) => (
                 <tr key={row.key}>
-                  <th scope="row">{row.label}</th>
+                  <th scope="row">{t(row.label)}</th>
                   <td>{formatValue(row.cell_value, row.unit)}</td>
-                  <td>Site {formatValue(row.target_value, row.unit)}</td>
+                  <td>{t("Site {value}", { value: formatValue(row.target_value, row.unit) })}</td>
                 </tr>
               ))}
             </tbody>
@@ -181,16 +183,16 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
         </details>
       )}
 
-      <h3>What to test here</h3>
+      <h3>{t("What to test here")}</h3>
       <ul className="tags">
         {sheet.test_tags.map((tag) => (
-          <li key={tag}>{tag}</li>
+          <li key={tag}>{t(tag)}</li>
         ))}
       </ul>
 
-      {scaleNote && <p className="hint">{scaleNote}</p>}
+      {scaleNote && <p className="hint">{t(scaleNote)}</p>}
 
-      <h3>Earth data sources</h3>
+      <h3>{t("Earth data sources")}</h3>
       <ul className="sources">
         {earthSources.map((row) => (
           <li key={row.source_name}>
@@ -202,7 +204,7 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
       </ul>
       {siteSources.length > 0 && (
         <>
-          <h3>Site data sources</h3>
+          <h3>{t("Site data sources")}</h3>
           <ul className="sources">
             {siteSources.map((url) => (
               <li key={url}>

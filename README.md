@@ -32,7 +32,12 @@ npm run build   # type-check and production build in dist/
 | `src/components/RankedList.tsx` | Top analogs, spaced apart and linked to the map |
 | `src/components/SiteSheet.tsx` | The full explanation of one Earth cell |
 | `src/components/MethodView.tsx` | Formulas, sources and the limits statement |
+| `src/i18n.ts` | Spanish and English texts. The English text is the key, so add a line to `ES` for each new text |
 
 ## How to read the map
 
 Color is the score, on a colorblind-safe viridis scale stretched over the scores on screen. Opacity is confidence. Gray cells fail the vegetation gate. Pins are documented analogs.
+
+## Language and export
+
+The ES and EN buttons in the top bar switch the language, and the choice is remembered. Above the ranked list, CSV downloads the list from the API's `/export`, and PDF opens the print dialog with only the list on the page, so choose "Save as PDF" there.

@@ -1,4 +1,5 @@
 import type { Band } from "./api";
+import { numberLocale, t } from "./i18n";
 
 /** Viridis is colorblind-safe and stays readable on a projector (spec FR-W3). */
 const VIRIDIS: [number, number, number][] = [
@@ -32,15 +33,15 @@ export function formatCoord(lat: number, lon: number): string {
 }
 
 export function formatValue(value: number | string | null | undefined, unit: string): string {
-  if (value === null || value === undefined) return "no data yet";
-  if (typeof value === "string") return value;
+  if (value === null || value === undefined) return t("no data yet");
+  if (typeof value === "string") return t(value);
   const magnitude = Math.abs(value);
   const digits = magnitude >= 100 ? 0 : magnitude >= 10 ? 1 : 2;
-  const text = value.toLocaleString("en-US", { maximumFractionDigits: digits });
+  const text = value.toLocaleString(numberLocale(), { maximumFractionDigits: digits });
   if (unit === "class" || unit === "NDVI") return text;
   if (unit === "deg") return `${text}°`;
   if (unit === "C") return `${text} °C`;
-  return `${text} ${unit}`;
+  return `${text} ${t(unit)}`;
 }
 
 export const BAND_LABEL: Record<Band, string> = {

@@ -1,5 +1,6 @@
 import type { Feature, Meta, Profile, Target, Weights } from "../api";
 import { formatValue, TERRAIN_CHIPS } from "../format";
+import { t } from "../i18n";
 
 interface Props {
   meta: Meta;
@@ -42,24 +43,24 @@ export default function Controls(props: Props) {
   const missing = features.filter((feature) => (target.features[feature.key]?.value ?? null) === null);
 
   return (
-    <aside className="panel controls" aria-label="Search settings">
+    <aside className="panel controls" aria-label={t("Search settings")}>
       <section>
         <div className="section-row">
-          <span className={`body-tag body-${target.body}`}>{target.body === "moon" ? "Moon" : "Mars"}</span>
+          <span className={`body-tag body-${target.body}`}>{target.body === "moon" ? t("Moon") : t("Mars")}</span>
           <button className="button primary" onClick={props.onChangeSite}>
-            Change site
+            {t("Change site")}
           </button>
         </div>
-        <h1 className="site-name">{target.name}</h1>
-        <p className="target-description">{target.description}</p>
+        <h1 className="site-name">{t(target.name)}</h1>
+        <p className="target-description">{t(target.description)}</p>
         {target.climate_status !== "ready" && (
           <p className={target.climate_status === "pending" ? "hint pending" : "warning"}>
-            {CLIMATE_MESSAGE[target.climate_status]}
+            {t(CLIMATE_MESSAGE[target.climate_status])}
           </p>
         )}
 
         <details className="stats-card" open>
-          <summary>Values at this site</summary>
+          <summary>{t("Values at this site")}</summary>
           <table>
             <tbody>
               {features.map((feature) => {
@@ -68,7 +69,7 @@ export default function Controls(props: Props) {
                 const flagged = target.beyond_earth.includes(feature.key);
                 return (
                   <tr key={feature.key} title={entry?.note ?? undefined}>
-                    <th scope="row">{feature.label}</th>
+                    <th scope="row">{t(feature.label)}</th>
                     <td className={hasValue ? "" : "no-data"}>
                       {entry?.source_url && hasValue ? (
                         <a href={entry.source_url} target="_blank" rel="noreferrer">
@@ -78,15 +79,15 @@ export default function Controls(props: Props) {
                         formatValue(entry?.value, feature.unit)
                       )}
                       {flagged && (
-                        <span className="flag" title="Outside the Earth range, so a cell can only be as close as Earth gets">
-                          beyond Earth
+                        <span className="flag" title={t("Outside the Earth range, so a cell can only be as close as Earth gets")}>
+                          {t("beyond Earth")}
                         </span>
                       )}
                     </td>
                     <td>
                       {entry?.basis && (
-                        <span className={`basis basis-${entry.basis}`} title={BASIS_TITLE[entry.basis]}>
-                          {entry.basis}
+                        <span className={`basis basis-${entry.basis}`} title={t(BASIS_TITLE[entry.basis])}>
+                          {t(entry.basis)}
                         </span>
                       )}
                     </td>
@@ -96,24 +97,24 @@ export default function Controls(props: Props) {
             </tbody>
           </table>
           {missing.length > 0 && (
-            <p className="hint">Blank values are left out of the score and lower confidence. Event data can fill them later.</p>
+            <p className="hint">{t("Blank values are left out of the score and lower confidence. Event data can fill them later.")}</p>
           )}
         </details>
         {beyondShare > 0 && (
           <p className="beyond-note">
-            <strong>{Math.round(beyondShare * 100)}%</strong> of the active weight rests on values beyond Earth's range.
+            <strong>{Math.round(beyondShare * 100)}%</strong> {t("of the active weight rests on values beyond Earth's range.")}
           </p>
         )}
       </section>
 
       <section>
         <label className="field-label" htmlFor="profile">
-          Research purpose
+          {t("Research purpose")}
         </label>
         <select id="profile" value={profile.id} onChange={(e) => props.onProfile(e.target.value)}>
           {profiles.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.label}
+              {t(p.label)}
             </option>
           ))}
         </select>
@@ -121,15 +122,15 @@ export default function Controls(props: Props) {
 
       <section>
         <div className="section-row">
-          <h2 className="field-label">Feature weights</h2>
+          <h2 className="field-label">{t("Feature weights")}</h2>
           <button className="link-button" onClick={props.onResetWeights} disabled={!customized}>
-            Reset
+            {t("Reset")}
           </button>
         </div>
         <div className="sliders">
           {sliders.map((feature) => (
             <label key={feature.key} className="slider">
-              <span>{feature.label}</span>
+              <span>{t(feature.label)}</span>
               <input
                 type="range"
                 min={0}
@@ -142,28 +143,28 @@ export default function Controls(props: Props) {
             </label>
           ))}
         </div>
-        <p className="hint">The vegetation gate stays on at any weight, so forests never rank as analogs.</p>
+        <p className="hint">{t("The vegetation gate stays on at any weight, so forests never rank as analogs.")}</p>
       </section>
 
       <section>
         <label className="field-label" htmlFor="preset">
-          Earth area
+          {t("Earth area")}
         </label>
         <div className="section-row">
           <select id="preset" value={props.presetId ?? "drawn"} onChange={(e) => props.onPreset(e.target.value)}>
             {meta.region_presets.map((preset) => (
               <option key={preset.id} value={preset.id}>
-                {preset.name}
+                {t(preset.name)}
               </option>
             ))}
-            {props.presetId === null && <option value="drawn">Drawn area</option>}
+            {props.presetId === null && <option value="drawn">{t("Drawn area")}</option>}
           </select>
           <button className={`button ${props.drawing ? "active" : ""}`} onClick={props.onToggleDraw} aria-pressed={props.drawing}>
-            {props.drawing ? "Drag on map" : "Draw"}
+            {props.drawing ? t("Drag on map") : t("Draw")}
           </button>
         </div>
 
-        <h2 className="field-label spaced">Terrain</h2>
+        <h2 className="field-label spaced">{t("Terrain")}</h2>
         <div className="chips">
           {TERRAIN_CHIPS.map((chip) => {
             const active = props.terrain.includes(chip.id);
@@ -176,14 +177,14 @@ export default function Controls(props: Props) {
                   props.onTerrain(active ? props.terrain.filter((t) => t !== chip.id) : [...props.terrain, chip.id])
                 }
               >
-                {chip.label}
+                {t(chip.label)}
               </button>
             );
           })}
         </div>
 
         <label className="slider confidence-slider">
-          <span>Minimum confidence</span>
+          <span>{t("Minimum confidence")}</span>
           <input
             type="range"
             min={0}

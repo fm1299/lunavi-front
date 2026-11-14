@@ -8,6 +8,7 @@ import MethodView from "./components/MethodView";
 import RankedList from "./components/RankedList";
 import SitePicker from "./components/SitePicker";
 import SiteSheet from "./components/SiteSheet";
+import { getLang, type Lang, setLang, t } from "./i18n";
 
 type View = "analogs" | "picker" | "method";
 
@@ -27,6 +28,12 @@ interface Boot {
 export default function App() {
   const [boot, setBoot] = useState<Boot | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
+  // Texts are read through t() while rendering, so a new language only needs a re-render.
+  const [lang, setLangState] = useState<Lang>(getLang());
+  const onLang = useCallback((next: Lang) => {
+    setLang(next);
+    setLangState(next);
+  }, []);
 
   useEffect(() => {
     Promise.all([api.meta(), api.targets(), api.profiles(), api.features(), api.analogs()])
@@ -37,19 +44,20 @@ export default function App() {
   if (bootError) {
     return (
       <main className="boot-message">
-        <h1>LUNAVI can't reach its API</h1>
+        <h1>{t("LUNAVI can't reach its API")}</h1>
         <p>{bootError}</p>
         <p>
-          Start it from lunavi-back with <code>uv run uvicorn api.main:app</code>, then reload this page.
+          {t("Start it from lunavi-back with")} <code>uv run uvicorn api.main:app</code>
+          {t(", then reload this page.")}
         </p>
       </main>
     );
   }
-  if (!boot) return <main className="boot-message">Loading LUNAVI…</main>;
-  return <Workspace boot={boot} />;
+  if (!boot) return <main className="boot-message">{t("Loading LUNAVI…")}</main>;
+  return <Workspace boot={boot} lang={lang} onLang={onLang} />;
 }
 
-function Workspace({ boot }: { boot: Boot }) {
+function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (lang: Lang) => void }) {
   const { meta, targets, profiles, features, analogs } = boot;
   const [view, setView] = useState<View>("analogs");
   // The first preset opens by default, with results and no clicks (spec FR-W11).
@@ -138,7 +146,7 @@ function Workspace({ boot }: { boot: Boot }) {
       .cell(selected, { target: target.id, profile: profileId, weights: debouncedWeights }, controller.signal)
       .then(setSheet)
       .catch((error: Error) => {
-        if (error.name !== "AbortError") setSheetError(`Could not load this cell: ${error.message}`);
+        if (error.name !== "AbortError") setSheetError(t("Could not load this cell: {error}", { error: error.message }));
       });
     return () => controller.abort();
   }, [selected, target.id, target.climate_status, profileId, debouncedWeights]);
@@ -174,30 +182,42 @@ function Workspace({ boot }: { boot: Boot }) {
         <div className="brand">
           <span className="brand-mark" aria-hidden="true" />
           <span className="brand-name">LUNAVI</span>
-          <span className="brand-sub">Earth analogs of the Moon and Mars</span>
+          <span className="brand-sub">{t("Earth analogs of the Moon and Mars")}</span>
         </div>
-        <nav aria-label="Views">
+        <nav aria-label={t("Views")}>
           <button
             className={`tab ${view !== "method" ? "active" : ""}`}
             aria-current={view !== "method" ? "page" : undefined}
             onClick={() => setView("analogs")}
           >
-            Find analogs
+            {t("Find analogs")}
           </button>
           <button
             className={`tab ${view === "method" ? "active" : ""}`}
             aria-current={view === "method" ? "page" : undefined}
             onClick={() => setView("method")}
           >
-            Method
+            {t("Method")}
           </button>
         </nav>
         <div className={`data-badge ${meta.dummy ? "dummy" : ""}`} title={meta.region.name}>
-          {meta.dummy ? "Dummy data, not real results" : "Prototype on open data"}
+          {meta.dummy ? t("Dummy data, not real results") : t("Prototype on open data")}
+        </div>
+        <div className="segmented lang-switch" role="group" aria-label={t("Language")}>
+          {(["es", "en"] as const).map((option) => (
+            <button
+              key={option}
+              className={lang === option ? "active" : ""}
+              aria-pressed={lang === option}
+              onClick={() => onLang(option)}
+            >
+              {option.toUpperCase()}
+            </button>
+          ))}
         </div>
       </header>
 
-      {resultError && <div className="error-banner">Could not load results: {resultError}</div>}
+      {resultError && <div className="error-banner">{t("Could not load results: {error}", { error: resultError })}</div>}
 
       <div className={`workspace ${view === "analogs" ? "" : "hidden"}`}>
         <Controls
@@ -244,11 +264,19 @@ function Workspace({ boot }: { boot: Boot }) {
           onDrawn={onDrawn}
         />
 
-        <aside className="panel results" aria-label="Results">
+        <aside className="panel results" aria-label={t("Results")}>
           {selected ? (
             <SiteSheet sheet={sheet} target={target} error={sheetError} onClose={() => setSelected(null)} />
           ) : (
-            <RankedList cells={top} meta={resultMeta} hovered={hovered} onSelect={setSelected} onHover={setHovered} />
+            <RankedList
+              cells={top}
+              meta={resultMeta}
+              hovered={hovered}
+              printTitle={t("Earth analogs of {site}, for {purpose}", { site: t(target.name), purpose: t(profile.label) })}
+              csvUrl={api.exportUrl(query, TOP_N, TOP_SEPARATION_KM)}
+              onSelect={setSelected}
+              onHover={setHovered}
+            />
           )}
         </aside>
       </div>
@@ -263,7 +291,7 @@ function Workspace({ boot }: { boot: Boot }) {
         </main>
       )}
 
-      <footer className="limits">{meta.limits_statement}</footer>
+      <footer className="limits">{t(meta.limits_statement)}</footer>
     </div>
   );
 }

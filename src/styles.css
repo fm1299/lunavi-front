@@ -1034,3 +1034,87 @@ select {
     max-height: 70vh;
   }
 }
+
+/* Language switch and export (spec FR-W12, FR-W14) */
+.lang-switch {
+  flex: none;
+  margin-top: 0;
+}
+
+.lang-switch button {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+
+.export-row {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.export-row .button {
+  text-decoration: none;
+}
+
+.print-only {
+  display: none;
+}
+
+/* Printing keeps only the ranked list, so "Save as PDF" gives the shortlist on white paper. */
+@media print {
+  html,
+  body,
+  #root,
+  .app {
+    height: auto;
+    display: block;
+    background: #fff;
+    color: #000;
+  }
+
+  .topbar nav,
+  .lang-switch,
+  .controls,
+  .map-shell,
+  .export-row,
+  .error-banner,
+  .picker,
+  .page-shell {
+    display: none !important;
+  }
+
+  .workspace,
+  .workspace.hidden {
+    display: block;
+  }
+
+  .topbar,
+  .panel,
+  .panel-header,
+  .limits,
+  .rank-row {
+    background: #fff;
+    color: #000;
+    overflow: visible;
+    position: static;
+  }
+
+  .app * {
+    color: #000 !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .print-title {
+    padding: 8px 16px;
+    font-weight: 600;
+  }
+
+  .rank-row {
+    break-inside: avoid;
+    background: #fff !important; /* a hovered row is dark on screen */
+  }
+}

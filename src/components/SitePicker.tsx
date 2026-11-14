@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Body, Meta, Target } from "../api";
 import { api } from "../api";
 import { formatCoord } from "../format";
+import { t } from "../i18n";
 
 interface Props {
   meta: Meta;
@@ -118,26 +119,28 @@ export default function SitePicker({ meta, presets, current, onChosen, onCancel 
     try {
       onChosen(await api.resolveSite(body, latValue, lonValue));
     } catch (failure) {
-      setError(`Could not read this location: ${(failure as Error).message}`);
+      setError(t("Could not read this location: {error}", { error: (failure as Error).message }));
       setReading(false);
     }
   };
 
   return (
     <div className="picker">
-      <aside className="panel picker-panel" aria-label="Choose a site">
+      <aside className="panel picker-panel" aria-label={t("Choose a site")}>
         <section>
           <div className="section-row">
-            <h1 className="picker-title">Choose a site</h1>
+            <h1 className="picker-title">{t("Choose a site")}</h1>
             <button className="link-button" onClick={onCancel}>
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
           <p className="hint">
-            Click anywhere on the map or type coordinates. LUNAVI reads about {meta.site_window_km} km around that point,
-            then ranks every Earth cell against it.
+            {t(
+              "Click anywhere on the map or type coordinates. LUNAVI reads about {km} km around that point, then ranks every Earth cell against it.",
+              { km: meta.site_window_km },
+            )}
           </p>
-          <div className="segmented" role="group" aria-label="Body">
+          <div className="segmented" role="group" aria-label={t("Body")}>
             {(["moon", "mars"] as const).map((option) => (
               <button
                 key={option}
@@ -145,7 +148,7 @@ export default function SitePicker({ meta, presets, current, onChosen, onCancel 
                 aria-pressed={body === option}
                 onClick={() => setBody(option)}
               >
-                {BODY_LABEL[option]}
+                {t(BODY_LABEL[option])}
               </button>
             ))}
           </div>
@@ -154,7 +157,7 @@ export default function SitePicker({ meta, presets, current, onChosen, onCancel 
         <section>
           <div className="coordinate-grid">
             <label>
-              <span className="field-label">Latitude</span>
+              <span className="field-label">{t("Latitude")}</span>
               <input
                 value={lat}
                 inputMode="decimal"
@@ -163,7 +166,7 @@ export default function SitePicker({ meta, presets, current, onChosen, onCancel 
               />
             </label>
             <label>
-              <span className="field-label">Longitude</span>
+              <span className="field-label">{t("Longitude")}</span>
               <input
                 value={lon}
                 inputMode="decimal"
@@ -172,24 +175,24 @@ export default function SitePicker({ meta, presets, current, onChosen, onCancel 
               />
             </label>
           </div>
-          {!valid && <p className="warning">Latitude runs from -90 to 90, and longitude from -180 to 180.</p>}
-          {valid && <p className="hint">{formatCoord(latValue, lonValue)}, east positive</p>}
+          {!valid && <p className="warning">{t("Latitude runs from -90 to 90, and longitude from -180 to 180.")}</p>}
+          {valid && <p className="hint">{t("{coord}, east positive", { coord: formatCoord(latValue, lonValue) })}</p>}
           <button className="button primary" disabled={!valid || reading} onClick={find}>
-            {reading ? "Reading this location…" : "Find Earth analogs"}
+            {reading ? t("Reading this location…") : t("Find Earth analogs")}
           </button>
-          {reading && <p className="hint">{READ_HINT[body]}</p>}
+          {reading && <p className="hint">{t(READ_HINT[body])}</p>}
           {error && <p className="warning">{error}</p>}
         </section>
 
         <section>
-          <h2 className="field-label">Or start from a preset</h2>
+          <h2 className="field-label">{t("Or start from a preset")}</h2>
           <ul className="preset-list">
             {presets
               .filter((preset) => preset.body === body)
               .map((preset) => (
                 <li key={preset.id}>
                   <button className="preset" onClick={() => onChosen(preset)}>
-                    <strong>{preset.name}</strong>
+                    <strong>{t(preset.name)}</strong>
                     <span>{formatCoord(preset.lat, preset.lon)}</span>
                   </button>
                 </li>
@@ -198,7 +201,7 @@ export default function SitePicker({ meta, presets, current, onChosen, onCancel 
         </section>
       </aside>
       <div className="map-shell">
-        <div ref={element} className="map" role="application" aria-label={`Map of the ${BODY_LABEL[body]}`} />
+        <div ref={element} className="map" role="application" aria-label={body === "moon" ? t("Map of the Moon") : t("Map of Mars")} />
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type { Analog, Bbox, CompactCells, Meta } from "../api";
 import { cellId } from "../api";
 import { formatCoord, viridis } from "../format";
+import { t } from "../i18n";
 
 const GIBS_URL = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best";
 const MIN_HIGHLIGHT_PX = 12;
@@ -201,9 +202,9 @@ export default function GridMap(props: Props) {
         tip.style.transform = `translate(${event.containerPoint.x + 14}px, ${event.containerPoint.y + 14}px)`;
         const vetoed = data.score[index] <= 0;
         tip.innerHTML =
-          `<strong>${vetoed ? "Vegetation gate" : `Score ${data.score[index].toFixed(1)}`}</strong>` +
+          `<strong>${vetoed ? t("Vegetation gate") : t("Score {score}", { score: data.score[index].toFixed(1) })}</strong>` +
           `<span>${formatCoord(data.lat[index], data.lon[index])}</span>` +
-          `<span>Confidence ${(data.confidence[index] * 100).toFixed(0)}%</span>`;
+          `<span>${t("Confidence {percent}%", { percent: (data.confidence[index] * 100).toFixed(0) })}</span>`;
       } else {
         tip.style.display = "none";
       }
@@ -348,16 +349,16 @@ export default function GridMap(props: Props) {
 
   return (
     <div className="map-shell">
-      <div ref={element} className="map" role="application" aria-label="Map of Earth cells colored by analog score" />
+      <div ref={element} className="map" role="application" aria-label={t("Map of Earth cells colored by analog score")} />
       <div ref={tipRef} className="map-tip" />
       <div className="legend">
         <div className="legend-bar" />
         <div className="legend-scale">
           <span>{range.min.toFixed(0)}</span>
-          <span>Score</span>
+          <span>{t("Score")}</span>
           <span>{range.max.toFixed(0)}</span>
         </div>
-        <p>Brighter cells are more similar. Faint cells have lower confidence. Pins are documented analogs.</p>
+        <p>{t("Brighter cells are more similar. Faint cells have lower confidence. Pins are documented analogs.")}</p>
       </div>
     </div>
   );

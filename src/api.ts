@@ -192,6 +192,14 @@ export const api = {
     params.set("min_separation_km", String(minSeparationKm));
     return get<{ meta: ResultMeta; cells: FullCell[] }>("/results", params, signal);
   },
+  /** A link to the same list as a CSV file (spec FR-W12). */
+  exportUrl: (query: Query, topN: number, minSeparationKm: number) => {
+    const params = resultParams(query);
+    params.set("format", "csv");
+    params.set("top_n", String(topN));
+    params.set("min_separation_km", String(minSeparationKm));
+    return `${API_URL}/export?${params}`;
+  },
   cell: (cellId: string, query: Pick<Query, "target" | "profile" | "weights">, signal?: AbortSignal) => {
     const params = new URLSearchParams({ target: query.target, profile: query.profile });
     if (query.weights) params.set("weights", weightsParam(query.weights));
