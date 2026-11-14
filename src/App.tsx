@@ -4,14 +4,15 @@ import type { Analog, Bbox, CellSheet, CompactCells, Feature, FullCell, Gaps, Me
 import { api } from "./api";
 import Answer, { type NextStep } from "./components/Answer";
 import AskBox from "./components/AskBox";
-import Controls from "./components/Controls";
 import { GapTable, PortfolioList } from "./components/Coverage";
 import GridMap, { type MapLayer, type ScoreRange } from "./components/GridMap";
 import MethodView from "./components/MethodView";
 import RankedList from "./components/RankedList";
 import SearchSentence from "./components/SearchSentence";
+import SearchSettings from "./components/SearchSettings";
 import SitePicker from "./components/SitePicker";
 import SiteSheet from "./components/SiteSheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { getLang, type Lang, setLang, t } from "./i18n";
 
 type View = "analogs" | "picker" | "method";
@@ -481,7 +482,7 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
           {selected ? (
             <SiteSheet sheet={sheet} target={target} error={sheetError} onClose={() => setSelected(null)} />
           ) : (
-            <>
+            <div className="flex flex-col gap-5 p-5 print:p-0">
               {meta.ai?.available && (
                 <AskBox
                   key={askRound}
@@ -526,64 +527,59 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
               />
               <Answer summary={summary} loading={summaryLoading} nextSteps={nextSteps.slice(0, 3)} />
 
-              <div className="segmented result-tabs" role="group" aria-label={t("Results")}>
-                {RESULT_TABS.map(([id, label]) => (
-                  <button
-                    key={id}
-                    className={resultTab === id ? "active" : ""}
-                    aria-pressed={resultTab === id}
-                    onClick={() => setResultTab(id)}
-                  >
-                    {t(label)}
-                  </button>
-                ))}
-              </div>
-              {resultTab === "portfolio" && (
-                <PortfolioList portfolio={portfolio} features={features} onSelect={setSelected} onHover={setHovered} />
-              )}
-              {resultTab === "gaps" && <GapTable gaps={gaps} features={features} />}
-              {resultTab === "list" && (
-                <RankedList
-                  cells={top}
-                  features={features}
-                  meta={resultMeta}
-                  hovered={hovered}
-                  printTitle={t("Earth analogs of {site}, for {purpose}", { site: t(target.name), purpose: t(profile.label) })}
-                  csvUrl={api.exportUrl(query, TOP_N, TOP_SEPARATION_KM)}
-                  onSelect={setSelected}
-                  onHover={setHovered}
-                />
-              )}
+              <Tabs value={resultTab} onValueChange={(value) => setResultTab(value as ResultTab)} className="flex flex-col gap-3">
+                <TabsList className="print:hidden" aria-label={t("Results")}>
+                  {RESULT_TABS.map(([id, label]) => (
+                    <TabsTrigger key={id} value={id}>
+                      {t(label)}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                <TabsContent value="list">
+                  <RankedList
+                    cells={top}
+                    features={features}
+                    meta={resultMeta}
+                    hovered={hovered}
+                    pinned={MAP_PINS}
+                    printTitle={t("Earth analogs of {site}, for {purpose}", { site: t(target.name), purpose: t(profile.label) })}
+                    csvUrl={api.exportUrl(query, TOP_N, TOP_SEPARATION_KM)}
+                    onSelect={setSelected}
+                    onHover={setHovered}
+                  />
+                </TabsContent>
+                <TabsContent value="portfolio" className="legacy-list">
+                  <PortfolioList portfolio={portfolio} features={features} onSelect={setSelected} onHover={setHovered} />
+                </TabsContent>
+                <TabsContent value="gaps" className="legacy-list">
+                  <GapTable gaps={gaps} features={features} />
+                </TabsContent>
+              </Tabs>
 
-              <details className="advanced">
-                <summary>{t("Advanced settings: site values, weights, drawn area and confidence")}</summary>
-                <Controls
-                  meta={meta}
-                  profiles={profiles}
-                  features={features}
-                  target={target}
-                  profile={profile}
-                  weights={weights}
-                  customized={customWeights !== null}
-                  beyondShare={resultMeta?.beyond_earth_weight_share ?? 0}
-                  presetId={presetId}
-                  terrain={terrain}
-                  minConfidence={minConfidence}
-                  drawing={drawing}
-                  onChangeSite={() => setView("picker")}
-                  onProfile={chooseProfile}
-                  onWeight={(key, value) => {
-                    setEmphasis(null);
-                    setCustomWeights({ ...weights, [key]: value });
-                  }}
-                  onResetWeights={() => chooseEmphasis(null)}
-                  onPreset={choosePreset}
-                  onToggleDraw={() => setDrawing((value) => !value)}
-                  onTerrain={setTerrain}
-                  onMinConfidence={setMinConfidence}
-                />
-              </details>
-            </>
+              <SearchSettings
+                meta={meta}
+                features={features}
+                target={target}
+                profile={profile}
+                weights={weights}
+                customized={customWeights !== null}
+                beyondShare={resultMeta?.beyond_earth_weight_share ?? 0}
+                presetId={presetId}
+                terrain={terrain}
+                minConfidence={minConfidence}
+                drawing={drawing}
+                onChangeSite={() => setView("picker")}
+                onWeight={(key, value) => {
+                  setEmphasis(null);
+                  setCustomWeights({ ...weights, [key]: value });
+                }}
+                onResetWeights={() => chooseEmphasis(null)}
+                onPreset={choosePreset}
+                onToggleDraw={() => setDrawing((value) => !value)}
+                onTerrain={setTerrain}
+                onMinConfidence={setMinConfidence}
+              />
+            </div>
           )}
         </aside>
 

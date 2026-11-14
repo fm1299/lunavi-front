@@ -1,3 +1,9 @@
+import { SparklesIcon } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
 import type { SummaryFacts, SummaryReply } from "../api";
 import { BAND_LABEL, lowerFirst } from "../format";
 import { t } from "../i18n";
@@ -55,24 +61,27 @@ export function plainAnswer(facts: SummaryFacts): string {
 export default function Answer({ summary, loading, nextSteps }: Props) {
   if (!summary && !loading) return null;
   return (
-    <section className={`answer ${loading ? "answer-loading" : ""}`} aria-live="polite">
-      <p>{summary ? (summary.text ?? plainAnswer(summary.facts)) : t("Writing the answer…")}</p>
+    <Card className="border-primary/30 bg-primary/10 print:hidden" aria-live="polite">
+      <p className={cn("text-[15px] leading-relaxed", loading && "text-muted-foreground")}>
+        {summary ? (summary.text ?? plainAnswer(summary.facts)) : t("Writing the answer…")}
+      </p>
       {nextSteps.length > 0 && (
-        <div className="answer-next" role="group" aria-label={t("Refine the search")}>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("Refine the search")}>
           {nextSteps.map((step) => (
-            <button key={step.label} type="button" onClick={step.run}>
+            <Button key={step.label} variant="outline" size="sm" className="h-7 rounded-full bg-background/60" onClick={step.run}>
               {t(step.label)}
-            </button>
+            </Button>
           ))}
         </div>
       )}
       {summary && (
-        <p className="answer-foot">
+        <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+          {summary.source === "ai" && <SparklesIcon className="mt-0.5 size-3 shrink-0 text-primary" aria-hidden="true" />}
           {summary.source === "ai"
-            ? t("✦ Written by AI ({model}) from the numbers in the list. It never changes a score.", { model: summary.model ?? "" })
+            ? t("Written by AI ({model}) from the numbers in the list. It never changes a score.", { model: summary.model ?? "" })
             : t("Written automatically from the numbers in the list.")}
         </p>
       )}
-    </section>
+    </Card>
   );
 }

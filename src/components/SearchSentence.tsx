@@ -1,4 +1,10 @@
+import { RotateCcwIcon, Undo2Icon } from "lucide-react";
 import type { ReactNode } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardLabel } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 import type { Feature, Meta, Profile, Target } from "../api";
 import { lowerFirst, TERRAIN_CHIPS } from "../format";
@@ -10,7 +16,7 @@ interface Props {
   target: Target;
   profiles: Profile[];
   profile: Profile;
-  /** Features that can be given more importance. */
+  /** Features that can be given more weight. */
   features: Feature[];
   /** A feature key, or null. `customized` is true when the weights were moved by hand. */
   emphasis: string | null;
@@ -32,30 +38,27 @@ interface Props {
   onStartOver: () => void;
 }
 
+const DRAWN = "__drawn";
 const OTHER_SITE = "__other";
 const CUSTOM = "__custom";
 const NONE = "__none";
 const SEVERAL = "__several";
 
-/** A native select sized to its current text, so the sentence reads as a sentence. */
-function Token(props: {
-  label: string;
-  value: string;
-  text: string;
-  highlighted: boolean;
-  onChange: (value: string) => void;
-  children: ReactNode;
-}) {
+/** One word of the sentence: a select that looks like text and sizes itself to its value. */
+function Token(props: { label: string; value: string; highlighted: boolean; onChange: (value: string) => void; children: ReactNode }) {
   return (
-    <select
-      className={`token ${props.highlighted ? "token-set" : ""}`}
-      aria-label={props.label}
-      value={props.value}
-      style={{ width: `calc(${(props.text.length * 0.58).toFixed(1)}em + 36px)` }}
-      onChange={(event) => props.onChange(event.target.value)}
-    >
-      {props.children}
-    </select>
+    <Select value={props.value} onValueChange={props.onChange}>
+      <SelectTrigger
+        aria-label={props.label}
+        className={cn(
+          "mx-0.5 h-7 max-w-full gap-1 border-transparent bg-secondary px-2 align-baseline text-[15px] font-medium hover:border-primary",
+          props.highlighted && "border-primary/50 bg-primary/15 text-primary",
+        )}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>{props.children}</SelectContent>
+    </Select>
   );
 }
 
@@ -69,40 +72,27 @@ export default function SearchSentence(props: Props) {
   const areaName = (id: string, name: string) => (id === whole ? t("the whole world") : t(name));
   const isPreset = presets.some((preset) => preset.id === target.id);
   const siteName = (site: Target) => `${t(site.name)} (${site.body === "moon" ? t("Moon") : t("Mars")})`;
-
-  const areaValue = props.presetId ?? "drawn";
-  const areaText =
-    props.presetId === null
-      ? t("the drawn area")
-      : areaName(props.presetId, meta.region_presets.find((preset) => preset.id === props.presetId)?.name ?? "");
   const emphasisValue = emphasis ?? (props.customized ? CUSTOM : NONE);
-  const emphasisText =
-    emphasis !== null
-      ? lowerFirst(t(features.find((feature) => feature.key === emphasis)?.label ?? emphasis))
-      : props.customized
-        ? t("what I set by hand")
-        : t("nothing in particular");
   const terrainValue = terrain.length === 0 ? NONE : terrain.length === 1 ? terrain[0] : SEVERAL;
   const terrainLabel = (id: string) => lowerFirst(t(TERRAIN_CHIPS.find((chip) => chip.id === id)?.label ?? id));
-  const terrainText =
-    terrain.length === 0 ? t("any") : terrain.length === 1 ? terrainLabel(terrain[0]) : t("several kinds of");
 
   const slots: Record<string, ReactNode> = {
     area: (
       <Token
         key="area"
         label={t("Earth area")}
-        value={areaValue}
-        text={areaText}
+        value={props.presetId ?? DRAWN}
         highlighted={fromQuestion.has("area")}
-        onChange={props.onArea}
+        onChange={(value) => {
+          if (value !== DRAWN) props.onArea(value);
+        }}
       >
         {meta.region_presets.map((preset) => (
-          <option key={preset.id} value={preset.id}>
+          <SelectItem key={preset.id} value={preset.id}>
             {areaName(preset.id, preset.name)}
-          </option>
+          </SelectItem>
         ))}
-        {props.presetId === null && <option value="drawn">{t("the drawn area")}</option>}
+        {props.presetId === null && <SelectItem value={DRAWN}>{t("the drawn area")}</SelectItem>}
       </Token>
     ),
     site: (
@@ -110,17 +100,17 @@ export default function SearchSentence(props: Props) {
         key="site"
         label={t("Moon or Mars site")}
         value={target.id}
-        text={isPreset ? siteName(target) : t(target.name)}
         highlighted={fromQuestion.has("site")}
         onChange={(value) => (value === OTHER_SITE ? props.onPickSite() : props.onSite(value))}
       >
         {presets.map((preset) => (
-          <option key={preset.id} value={preset.id}>
+          <SelectItem key={preset.id} value={preset.id}>
             {siteName(preset)}
-          </option>
+          </SelectItem>
         ))}
-        {!isPreset && <option value={target.id}>{t(target.name)}</option>}
-        <option value={OTHER_SITE}>{t("another point on the map…")}</option>
+        {!isPreset && <SelectItem value={target.id}>{t(target.name)}</SelectItem>}
+        <SelectSeparator />
+        <SelectItem value={OTHER_SITE}>{t("another point on the map…")}</SelectItem>
       </Token>
     ),
     purpose: (
@@ -128,14 +118,13 @@ export default function SearchSentence(props: Props) {
         key="purpose"
         label={t("Research purpose")}
         value={profile.id}
-        text={lowerFirst(t(profile.label))}
         highlighted={fromQuestion.has("purpose")}
         onChange={props.onProfile}
       >
         {profiles.map((option) => (
-          <option key={option.id} value={option.id}>
+          <SelectItem key={option.id} value={option.id}>
             {lowerFirst(t(option.label))}
-          </option>
+          </SelectItem>
         ))}
       </Token>
     ),
@@ -144,19 +133,18 @@ export default function SearchSentence(props: Props) {
         key="focus"
         label={t("Feature that matters most")}
         value={emphasisValue}
-        text={emphasisText}
         highlighted={fromQuestion.has("focus")}
         onChange={(value) => {
           if (value !== CUSTOM) props.onEmphasis(value === NONE ? null : value);
         }}
       >
-        <option value={NONE}>{t("nothing in particular")}</option>
+        <SelectItem value={NONE}>{t("nothing in particular")}</SelectItem>
         {features.map((feature) => (
-          <option key={feature.key} value={feature.key}>
+          <SelectItem key={feature.key} value={feature.key}>
             {lowerFirst(t(feature.label))}
-          </option>
+          </SelectItem>
         ))}
-        {emphasisValue === CUSTOM && <option value={CUSTOM}>{t("what I set by hand")}</option>}
+        {emphasisValue === CUSTOM && <SelectItem value={CUSTOM}>{t("what I set by hand")}</SelectItem>}
       </Token>
     ),
     terrain: (
@@ -164,19 +152,18 @@ export default function SearchSentence(props: Props) {
         key="terrain"
         label={t("Terrain")}
         value={terrainValue}
-        text={terrainText}
         highlighted={fromQuestion.has("terrain")}
         onChange={(value) => {
           if (value !== SEVERAL) props.onTerrain(value === NONE ? [] : [value]);
         }}
       >
-        <option value={NONE}>{t("any")}</option>
+        <SelectItem value={NONE}>{t("any")}</SelectItem>
         {TERRAIN_CHIPS.map((chip) => (
-          <option key={chip.id} value={chip.id}>
+          <SelectItem key={chip.id} value={chip.id}>
             {terrainLabel(chip.id)}
-          </option>
+          </SelectItem>
         ))}
-        {terrainValue === SEVERAL && <option value={SEVERAL}>{t("several kinds of")}</option>}
+        {terrainValue === SEVERAL && <SelectItem value={SEVERAL}>{t("several kinds of")}</SelectItem>}
       </Token>
     ),
   };
@@ -188,28 +175,30 @@ export default function SearchSentence(props: Props) {
   const parts = pattern.split(/\{(\w+)\}/).map((part, index) => (index % 2 === 1 ? slots[part] : part));
 
   return (
-    <section className="sentence-card">
-      <span className="field-label">
+    <Card className="print:hidden">
+      <CardLabel>
         {fromQuestion.size > 0
           ? t("This is what I understood. Touch a word to change it")
           : t("Your search. Touch a word to change it")}
-      </span>
-      <p className="sentence">{parts}</p>
+      </CardLabel>
+      <p className="text-base leading-9">{parts}</p>
       {props.notApplied.length > 0 && (
-        <p className="sentence-skipped">
+        <p className="border-l-2 pl-3 text-[13px] text-muted-foreground">
           {t("I could not use: {parts}. The rest was applied.", { parts: props.notApplied.map((part) => `«${part}»`).join(", ") })}
         </p>
       )}
-      <div className="sentence-foot">
+      <div className="-mb-1 -ml-2 flex flex-wrap gap-1">
         {props.canUndo && (
-          <button className="link-button" type="button" onClick={props.onUndo}>
-            {t("Back to the previous search")}
-          </button>
+          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={props.onUndo}>
+            <Undo2Icon />
+            {t("Undo last change")}
+          </Button>
         )}
-        <button className="link-button" type="button" onClick={props.onStartOver}>
+        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={props.onStartOver}>
+          <RotateCcwIcon />
           {t("Start over")}
-        </button>
+        </Button>
       </div>
-    </section>
+    </Card>
   );
 }

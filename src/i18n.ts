@@ -354,7 +354,7 @@ const ES: Record<string, string> = {
   "This is what I understood. Touch a word to change it": "Esto entendí. Toca una palabra para cambiarla",
   "Your search. Touch a word to change it": "Tu búsqueda. Toca una palabra para cambiarla",
   "I could not use: {parts}. The rest was applied.": "No pude usar: {parts}. El resto sí se aplicó.",
-  "Back to the previous search": "Volver a la búsqueda anterior",
+  "Undo last change": "Deshacer último cambio",
   "Start over": "Empezar de nuevo",
   "No place passes these filters. Try a wider area or lower confidence.":
     "Ningún lugar pasa estos filtros. Prueba una zona más amplia o menos confianza.",
@@ -368,8 +368,8 @@ const ES: Record<string, string> = {
     "Se dio más peso a {feature}, pero la Tierra solo se acerca hasta estos lugares.",
   "Writing the answer…": "Escribiendo la respuesta…",
   "Refine the search": "Afinar la búsqueda",
-  "✦ Written by AI ({model}) from the numbers in the list. It never changes a score.":
-    "✦ Escrito por IA ({model}) a partir de los números de la lista. Nunca cambia un puntaje.",
+  "Written by AI ({model}) from the numbers in the list. It never changes a score.":
+    "Escrito por IA ({model}) a partir de los números de la lista. Nunca cambia un puntaje.",
   "Written automatically from the numbers in the list.": "Escrito automáticamente a partir de los números de la lista.",
   "Only deserts": "Solo desiertos",
   "Search the whole Earth": "Buscar en toda la Tierra",
@@ -378,12 +378,15 @@ const ES: Record<string, string> = {
   "Matches on {closest} · differs on {weakest}": "Se parece en {closest} · difiere en {weakest}",
   "Matches on {closest}": "Se parece en {closest}",
   "Search and results": "Búsqueda y resultados",
-  "Advanced settings: site values, weights, drawn area and confidence":
-    "Ajustes avanzados: valores del sitio, pesos, zona dibujada y confianza",
   "Search in plain words": "Búsqueda con tus palabras",
   "You can describe what you are looking for in your own words. A free language model turns the request into the same settings the controls hold: a site, a purpose, one feature to give more importance to, an area and terrain. Anything it returns that is not a known site, purpose, feature or area is dropped and reported. A comparison such as \"colder\" gives that feature more importance; it is not a hard filter. The model also writes the short answer above the list from the numbers of the best results, and an answer that quotes any other number is discarded. The model never sees or changes a score: the ranking is always the same calculation.":
     "Puedes describir lo que buscas con tus palabras. Un modelo de lenguaje gratuito convierte el pedido en los mismos ajustes que tienen los controles: un sitio, un propósito, una variable con más peso, una zona y un terreno. Todo lo que devuelva y no sea un sitio, propósito, variable o zona conocidos se descarta y se informa. Una comparación como «más frío» le da más peso a esa variable; no es un filtro estricto. El modelo también escribe la respuesta corta sobre la lista a partir de los números de los mejores resultados, y una respuesta que cite cualquier otro número se descarta. El modelo nunca ve ni cambia un puntaje: el orden sale siempre del mismo cálculo.",
   "Model in use: {model}.": "Modelo en uso: {model}.",
   "No language model is set up right now, so the search is built by hand and the answer is written automatically.":
     "Ahora no hay un modelo de lenguaje configurado, así que la búsqueda se arma a mano y la respuesta se escribe automáticamente.",
+  "{count} beyond Earth": "{count} más allá de la Tierra",
+  "{count} with no data": "{count} sin datos",
+  changed: "cambiados",
+  "Area, terrain and confidence": "Zona, terreno y confianza",
+  "confidence {percent}% or more": "confianza de {percent}% o más",
 };

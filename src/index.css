@@ -1,0 +1,52 @@
+/*
+ * Tailwind and the shadcn/ui tokens. The reset layer (preflight) is left out on purpose: the map,
+ * the site picker, the site sheet and the method page still use styles.css, which expects the
+ * browser defaults. New parts of the app use the components in src/components/ui.
+ *
+ * styles.css stays outside the layers, as before. Only its few rules on bare elements (button,
+ * a, focus outlines) sit in the "legacy" layer, so a Tailwind class on a component wins over them.
+ */
+@layer theme, base, legacy, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "leaflet/dist/leaflet.css";
+@import "./styles.css";
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* One dark theme, on the same palette as styles.css. Colors are set as --color-* so they never
+   clash with the --muted and --accent variables that styles.css already uses for other things. */
+@theme {
+  --color-background: #0d1117;
+  --color-foreground: #e8edf2;
+  --color-card: #151b23;
+  --color-card-foreground: #e8edf2;
+  --color-popover: #1c242e;
+  --color-popover-foreground: #e8edf2;
+  --color-primary: #f2a65a;
+  --color-primary-foreground: #1a1206;
+  --color-secondary: #1c242e;
+  --color-secondary-foreground: #e8edf2;
+  --color-muted: #1c242e;
+  --color-muted-foreground: #9aa7b5;
+  --color-accent: #232d39;
+  --color-accent-foreground: #e8edf2;
+  --color-destructive: #ff8f70;
+  --color-border: #2a3441;
+  --color-input: #2a3441;
+  --color-ring: #f2a65a;
+  --color-good: #8fe0a8;
+  --color-fair: #e8d27a;
+  --color-poor: #ff9f85;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+}
+
+@layer base {
+  /* What the shadcn components need from the reset: borders are solid and take the border color. */
+  *,
+  ::before,
+  ::after {
+    border: 0 solid var(--color-border);
+  }
+}
