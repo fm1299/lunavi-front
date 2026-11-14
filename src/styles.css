@@ -33,8 +33,27 @@ body {
   color: var(--text);
 }
 
-a {
-  color: var(--accent);
+/* Rules on bare elements sit in a layer below the Tailwind utilities; see index.css. */
+@layer legacy {
+  a {
+    color: var(--accent);
+  }
+
+  button,
+  select,
+  input {
+    font: inherit;
+    color: inherit;
+  }
+
+  button:focus-visible,
+  select:focus-visible,
+  input:focus-visible,
+  a:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 }
 
 h1,
@@ -44,21 +63,6 @@ p {
   margin: 0;
 }
 
-button,
-select,
-input {
-  font: inherit;
-  color: inherit;
-}
-
-button:focus-visible,
-select:focus-visible,
-input:focus-visible,
-a:focus-visible,
-summary:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
 
 code {
   font-family: Consolas, "SF Mono", Menlo, monospace;
@@ -168,7 +172,7 @@ nav {
 .workspace {
   grid-row: 3;
   display: grid;
-  grid-template-columns: 310px minmax(0, 1fr) 360px;
+  grid-template-columns: 440px minmax(0, 1fr);
   min-height: 0;
 }
 
@@ -985,17 +989,7 @@ select {
   }
 
   .workspace {
-    grid-template-columns: 280px minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) 280px;
-  }
-
-  .controls {
-    grid-row: 1 / span 2;
-  }
-
-  .results {
-    border-left: 0;
-    border-top: 1px solid var(--line);
+    grid-template-columns: 360px minmax(0, 1fr);
   }
 
 }
@@ -1021,17 +1015,13 @@ select {
     grid-template-rows: auto;
   }
 
-  .controls {
-    grid-row: auto;
+  .side {
     border-right: 0;
+    overflow-y: visible;
   }
 
   .map-shell {
     height: 60vh;
-  }
-
-  .results {
-    max-height: 70vh;
   }
 }
 
@@ -1216,4 +1206,14 @@ select {
   .result-tabs {
     display: none;
   }
+}
+
+/* The search column. Its parts use the components in src/components/ui; see index.css. */
+.side {
+  border-right: 1px solid var(--line);
+}
+
+/* The portfolio and gap lists keep their own row styles; pull them to the column's edges. */
+.legacy-list {
+  margin: 0 -20px;
 }

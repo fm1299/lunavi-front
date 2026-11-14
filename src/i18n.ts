@@ -170,8 +170,8 @@ const ES: Record<string, string> = {
   "Score {score}": "Puntaje {score}",
   "Vegetation gate": "Filtro de vegetación",
   "Confidence {percent}%": "Confianza {percent}%",
-  "Brighter cells are more similar. Faint cells have lower confidence. Pins are documented analogs.":
-    "Las celdas más brillantes son más similares. Las tenues tienen menor confianza. Los pines son análogos documentados.",
+  "Brighter cells are more similar. Faint cells have lower confidence. Numbered pins are the places in the list; plain pins are documented analogs.":
+    "Las celdas más brillantes son más parecidas. Las celdas tenues tienen menor confianza. Los marcadores con número son los lugares de la lista; los simples son análogos documentados.",
 
   // Ranked list and export
   Results: "Resultados",
@@ -324,4 +324,69 @@ const ES: Record<string, string> = {
   "(a model, so it counts as literature)": "(un modelo, por eso cuenta como bibliografía)",
   "No source yet outside the presets": "Sin fuente aún fuera de los sitios predefinidos",
   "No source yet": "Sin fuente aún",
+
+  // Search in plain words (spec FR-AI2)
+  "What place on Earth are you looking for?": "¿Qué lugar de la Tierra buscas?",
+  "Write your question": "Escribe tu pregunta",
+  "Say it in your own words…": "Dilo con tus palabras…",
+  "Thinking…": "Pensando…",
+  Search: "Buscar",
+  "Or start from an idea": "O empieza con una idea",
+  "Places in South America like Jezero but colder": "Lugares en Sudamérica parecidos a Jezero pero más fríos",
+  "Where to test a habitat for the Moon's south pole base": "Dónde probar un hábitat para la base del polo sur de la Luna",
+  "Polar places to practice drilling for ice, like Arcadia Planitia":
+    "Lugares polares para practicar perforación de hielo, como Arcadia Planitia",
+  "I could not turn that into a search, so nothing changed. Tell me which Moon or Mars site it should resemble and, if you like, where on Earth to look. You can also build the search yourself in the sentence below.":
+    "No pude convertir eso en una búsqueda, así que no cambió nada. Dime a qué sitio de la Luna o Marte debe parecerse y, si quieres, en qué parte de la Tierra buscar. También puedes armar la búsqueda tú mismo en la frase de abajo.",
+  "The language model did not answer, so nothing changed. Try again, or build the search in the sentence below.":
+    "El modelo de lenguaje no respondió, así que no cambió nada. Intenta de nuevo o arma la búsqueda en la frase de abajo.",
+  "I'm looking for places in {area} similar to {site} for {purpose}, giving more weight to {focus}, on {terrain} terrain.":
+    "Busco lugares en {area} parecidos a {site} para {purpose}, con más peso en {focus}, en terreno {terrain}.",
+  "the whole world": "todo el mundo",
+  "the drawn area": "la zona dibujada",
+  "what I set by hand": "lo que ajusté a mano",
+  "nothing in particular": "nada en especial",
+  any: "de cualquier tipo",
+  "several kinds of": "de varios tipos",
+  "another point on the map…": "otro punto del mapa…",
+  "Moon or Mars site": "Sitio de la Luna o Marte",
+  "Feature that matters most": "Variable con más peso",
+  "This is what I understood. Touch a word to change it": "Esto entendí. Toca una palabra para cambiarla",
+  "Your search. Touch a word to change it": "Tu búsqueda. Toca una palabra para cambiarla",
+  "I could not use: {parts}. The rest was applied.": "No pude usar: {parts}. El resto sí se aplicó.",
+  "Undo last change": "Deshacer último cambio",
+  "Start over": "Empezar de nuevo",
+  "No place passes these filters. Try a wider area or lower confidence.":
+    "Ningún lugar pasa estos filtros. Prueba una zona más amplia o menos confianza.",
+  "an unnamed area": "una zona sin nombre",
+  "The closest match to {site} for {purpose} is in {country}, with {score} of 100 and {band} confidence.":
+    "Lo más parecido a {site} para {purpose} está en {country}, con {score} de 100 y confianza {band}.",
+  "Next comes {country}, with {score}.": "Le sigue {country}, con {score}.",
+  "The best place matches most on {closest} and least on {weakest}.":
+    "El mejor lugar se parece más en {closest} y menos en {weakest}.",
+  "More importance went to {feature}, but Earth only comes as close as these places.":
+    "Se dio más peso a {feature}, pero la Tierra solo se acerca hasta estos lugares.",
+  "Writing the answer…": "Escribiendo la respuesta…",
+  "Refine the search": "Afinar la búsqueda",
+  "Written by AI ({model}) from the numbers in the list. It never changes a score.":
+    "Escrito por IA ({model}) a partir de los números de la lista. Nunca cambia un puntaje.",
+  "Written automatically from the numbers in the list.": "Escrito automáticamente a partir de los números de la lista.",
+  "Only deserts": "Solo desiertos",
+  "Search the whole Earth": "Buscar en toda la Tierra",
+  "Make it drier": "Que sea más seco",
+  "What about a landing site?": "¿Y para un sitio de aterrizaje?",
+  "Matches on {closest} · differs on {weakest}": "Se parece en {closest} · difiere en {weakest}",
+  "Matches on {closest}": "Se parece en {closest}",
+  "Search and results": "Búsqueda y resultados",
+  "Search in plain words": "Búsqueda con tus palabras",
+  "You can describe what you are looking for in your own words. A free language model turns the request into the same settings the controls hold: a site, a purpose, one feature to give more importance to, an area and terrain. Anything it returns that is not a known site, purpose, feature or area is dropped and reported. A comparison such as \"colder\" gives that feature more importance; it is not a hard filter. The model also writes the short answer above the list from the numbers of the best results, and an answer that quotes any other number is discarded. The model never sees or changes a score: the ranking is always the same calculation.":
+    "Puedes describir lo que buscas con tus palabras. Un modelo de lenguaje gratuito convierte el pedido en los mismos ajustes que tienen los controles: un sitio, un propósito, una variable con más peso, una zona y un terreno. Todo lo que devuelva y no sea un sitio, propósito, variable o zona conocidos se descarta y se informa. Una comparación como «más frío» le da más peso a esa variable; no es un filtro estricto. El modelo también escribe la respuesta corta sobre la lista a partir de los números de los mejores resultados, y una respuesta que cite cualquier otro número se descarta. El modelo nunca ve ni cambia un puntaje: el orden sale siempre del mismo cálculo.",
+  "Model in use: {model}.": "Modelo en uso: {model}.",
+  "No language model is set up right now, so the search is built by hand and the answer is written automatically.":
+    "Ahora no hay un modelo de lenguaje configurado, así que la búsqueda se arma a mano y la respuesta se escribe automáticamente.",
+  "{count} beyond Earth": "{count} más allá de la Tierra",
+  "{count} with no data": "{count} sin datos",
+  changed: "cambiados",
+  "Area, terrain and confidence": "Zona, terreno y confianza",
+  "confidence {percent}% or more": "confianza de {percent}% o más",
 };
