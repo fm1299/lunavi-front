@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 
 import type { Analog, Bbox, CompactCells, FullCell, Meta } from "../api";
 import { cellId } from "../api";
-import { formatCoord, viridis } from "../format";
+import { BRAND, NO_DATA_COLOR, formatCoord, viridis } from "../format";
 import { t } from "../i18n";
 
 const GIBS_URL = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best";
@@ -119,11 +119,11 @@ class CellCanvas extends L.Layer {
           // Access is about reaching the cell, so it does not depend on the score or the gate.
           const value = access[i];
           context.globalAlpha = value === null ? 0.28 : 0.85;
-          context.fillStyle = value === null ? "#3b4350" : viridis(value);
+          context.fillStyle = value === null ? NO_DATA_COLOR : viridis(value);
         } else if (score[i] <= 0) {
           // Vetoed by the gate: visible, but clearly not a candidate.
           context.globalAlpha = 0.28;
-          context.fillStyle = "#3b4350";
+          context.fillStyle = NO_DATA_COLOR;
         } else {
           // Confidence as opacity (spec FR-W8).
           context.globalAlpha = 0.3 + 0.65 * confidence[i];
@@ -141,9 +141,10 @@ class CellCanvas extends L.Layer {
     const context = this.prepare(this.highlightCanvas, map);
     if (!context || !this.cells) return;
     const box = this.projector(map);
-    for (const [id, color] of [
-      [this.hovered, "#ffffff"],
-      [this.selected, "#f2a65a"],
+    // Light on dark, dark on light: each outline has a halo so it reads over any viridis color.
+    for (const [id, color, halo] of [
+      [this.hovered, BRAND.hueso, BRAND.negro],
+      [this.selected, BRAND.negro, BRAND.hueso],
     ] as const) {
       const index = id ? this.lookup.get(id) : undefined;
       if (index === undefined) continue;
@@ -151,9 +152,14 @@ class CellCanvas extends L.Layer {
       // At low zoom a cell is a pixel or two, so keep the outline big enough to see.
       const width = Math.max(w, MIN_HIGHLIGHT_PX);
       const height = Math.max(h, MIN_HIGHLIGHT_PX);
+      const left = x + w / 2 - width / 2;
+      const top = y + h / 2 - height / 2;
+      context.strokeStyle = halo;
+      context.lineWidth = 4;
+      context.strokeRect(left, top, width, height);
       context.strokeStyle = color;
       context.lineWidth = 2;
-      context.strokeRect(x + w / 2 - width / 2, y + h / 2 - height / 2, width, height);
+      context.strokeRect(left, top, width, height);
     }
   }
 }
@@ -287,9 +293,9 @@ export default function GridMap(props: Props) {
         .map((site) =>
           L.circleMarker([site.lat, site.lon], {
             radius: 4,
-            color: "#0d1117",
+            color: BRAND.hueso,
             weight: 1.5,
-            fillColor: "#f2a65a",
+            fillColor: BRAND.negro,
             fillOpacity: 1,
           }).bindTooltip(site.name, { direction: "top", offset: [0, -4] }),
         ),
@@ -323,7 +329,7 @@ export default function GridMap(props: Props) {
     const [west, south, east, north] = bbox;
     const bounds = L.latLngBounds([south, west], [north, east]);
     const rectangle = L.rectangle(bounds, {
-      color: "#f2a65a",
+      color: BRAND.hueso,
       weight: 1.5,
       fill: false,
       dashArray: "6 5",
@@ -350,7 +356,7 @@ export default function GridMap(props: Props) {
       if (!start) return;
       const bounds = L.latLngBounds(start, event.latlng);
       if (preview) preview.setBounds(bounds);
-      else preview = L.rectangle(bounds, { color: "#f2a65a", weight: 1.5, fillOpacity: 0.08 }).addTo(map);
+      else preview = L.rectangle(bounds, { color: BRAND.hueso, weight: 1.5, fillOpacity: 0.12 }).addTo(map);
     };
     const up = (event: L.LeafletMouseEvent) => {
       if (!start) return;

@@ -1,6 +1,24 @@
 import type { Band } from "./api";
 import { numberLocale, t } from "./i18n";
 
+/**
+ * Brand colors for code that cannot read CSS variables (the map canvas and Leaflet layers).
+ * Same values as the --lunavi-* variables in styles.css (brand guide v1.0, section 03).
+ */
+export const BRAND = {
+  hueso: "#f7f6f3",
+  plomoClaro: "#9c9b97",
+  grafito: "#2f3032",
+  negro: "#0f0f10",
+  oxido: "#b54a22",
+} as const;
+
+/** Cells with no value, and cells vetoed by the gate, on the map. */
+export const NO_DATA_COLOR = BRAND.plomoClaro;
+
+/** Each body has its color: lead greys for the Moon, rust for Mars. */
+export const BODY_COLOR = { moon: BRAND.grafito, mars: BRAND.oxido } as const;
+
 /** Viridis is colorblind-safe and stays readable on a projector (spec FR-W3). */
 const VIRIDIS: [number, number, number][] = [
   [68, 1, 84],

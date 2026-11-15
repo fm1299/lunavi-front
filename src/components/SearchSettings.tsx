@@ -45,9 +45,10 @@ const BASIS_TITLE = {
   physical: "Follows directly from the body",
 };
 const BASIS_CLASS = {
-  measured: "border-good/40 text-good",
-  literature: "border-fair/40 text-fair",
-  physical: "border-sky-300/40 text-sky-300",
+  // Origin tags carry their word, not a color: confidence colors stay for confidence only.
+  measured: "border-foreground/40 text-foreground",
+  literature: "border-dashed border-muted-foreground/60 text-muted-foreground",
+  physical: "border-border text-muted-foreground",
 };
 const CLIMATE_MESSAGE = {
   pending: "Reading temperature from the Mars Climate Database…",
@@ -89,7 +90,7 @@ export default function SearchSettings(props: Props) {
             </Button>
           </div>
           {target.climate_status !== "ready" && (
-            <p className={cn("text-[13px]", target.climate_status === "pending" ? "text-primary" : "text-destructive")}>
+            <p className={cn("text-[13px]", target.climate_status === "pending" ? "text-muted-foreground italic" : "text-destructive")}>
               {t(CLIMATE_MESSAGE[target.climate_status])}
             </p>
           )}
@@ -111,7 +112,7 @@ export default function SearchSettings(props: Props) {
                     )}
                     {flagged && (
                       <span
-                        className="block text-[11px] text-primary"
+                        className="mt-0.5 inline-block rounded-full bg-foreground px-1.5 text-[11px] text-background"
                         title={t("Outside the Earth range, so a cell can only be as close as Earth gets")}
                       >
                         {t("beyond Earth")}

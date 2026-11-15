@@ -14,7 +14,7 @@ export const RESTRICTION_LABEL: Record<RestrictionLevel, string> = {
 const RESTRICTION_CLASS: Record<RestrictionLevel, string> = {
   do_not_travel: "border-poor/50 bg-poor/10 text-poor",
   restricted: "border-fair/50 bg-fair/10 text-fair",
-  permit: "border-sky-300/40 bg-sky-300/10 text-sky-300",
+  permit: "border-border bg-secondary text-muted-foreground",
 };
 
 /** A short label for a place where fieldwork is unsafe, restricted or needs permits. */

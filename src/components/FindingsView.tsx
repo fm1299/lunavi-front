@@ -11,6 +11,7 @@ import { BAND_LABEL, formatCoord, lowerFirst } from "../format";
 import { t } from "../i18n";
 import { BAND_CLASS } from "./RankedList";
 import { LegalNotes, RESTRICTION_LABEL, RestrictionBadge, RestrictionDetails } from "./Restriction";
+import BrandStar from "./BrandStar";
 
 interface Props {
   targets: Target[];
@@ -194,7 +195,10 @@ export default function FindingsView({ targets, profiles, features, onOpen }: Pr
   return (
     <div className="page flex flex-col gap-6">
       <div>
-        <h1>{t("New findings")}</h1>
+        <h1 className="flex items-start gap-2">
+          {t("New findings")}
+          <BrandStar className="mt-1 size-4 text-foreground" />
+        </h1>
         <p className="lede">
           {t(
             "{count} Earth regions that rank in the top 1% for a preset site but are not documented analogs. Each one was checked in the literature in two rounds, and the app recomputes its score from the current table.",

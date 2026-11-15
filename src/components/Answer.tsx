@@ -1,4 +1,3 @@
-import { SparklesIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { SummaryFacts, SummaryReply } from "../api";
 import { BAND_LABEL, lowerFirst } from "../format";
 import { t } from "../i18n";
+import BrandStar from "./BrandStar";
 
 export interface NextStep {
   label: string;
@@ -61,7 +61,7 @@ export function plainAnswer(facts: SummaryFacts): string {
 export default function Answer({ summary, loading, nextSteps }: Props) {
   if (!summary && !loading) return null;
   return (
-    <Card className="border-primary/30 bg-primary/10 print:hidden" aria-live="polite">
+    <Card className="bg-card print:hidden" aria-live="polite">
       <p className={cn("text-[15px] leading-relaxed", loading && "text-muted-foreground")}>
         {summary ? (summary.text ?? plainAnswer(summary.facts)) : t("Writing the answer…")}
       </p>
@@ -76,7 +76,7 @@ export default function Answer({ summary, loading, nextSteps }: Props) {
       )}
       {summary && (
         <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
-          {summary.source === "ai" && <SparklesIcon className="mt-0.5 size-3 shrink-0 text-primary" aria-hidden="true" />}
+          {summary.source === "ai" && <BrandStar className="mt-0.5 text-foreground" />}
           {summary.source === "ai"
             ? t("Written by AI ({model}) from the numbers in the list. It never changes a score.", { model: summary.model ?? "" })
             : t("Written automatically from the numbers in the list.")}
