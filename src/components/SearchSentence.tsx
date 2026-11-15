@@ -45,14 +45,22 @@ const NONE = "__none";
 const SEVERAL = "__several";
 
 /** One word of the sentence: a select that looks like text and sizes itself to its value. */
-function Token(props: { label: string; value: string; highlighted: boolean; onChange: (value: string) => void; children: ReactNode }) {
+function Token(props: {
+  label: string;
+  value: string;
+  highlighted: boolean;
+  className?: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
+}) {
   return (
     <Select value={props.value} onValueChange={props.onChange}>
       <SelectTrigger
         aria-label={props.label}
         className={cn(
-          "mx-0.5 h-7 max-w-full gap-1 border-transparent bg-secondary px-2 align-baseline text-[15px] font-medium hover:border-primary",
-          props.highlighted && "border-primary/50 bg-primary/15 text-primary",
+          "mx-0.5 h-7 max-w-full gap-1 border-transparent bg-secondary px-2 align-baseline text-[15px] font-medium hover:border-ring",
+          props.highlighted && "border-foreground/40 bg-accent font-semibold",
+          props.className,
         )}
       >
         <SelectValue />
@@ -101,6 +109,7 @@ export default function SearchSentence(props: Props) {
         label={t("Moon or Mars site")}
         value={target.id}
         highlighted={fromQuestion.has("site")}
+        className={target.body === "mars" ? "bg-mars-dust text-mars-deep hover:border-mars" : undefined}
         onChange={(value) => (value === OTHER_SITE ? props.onPickSite() : props.onSite(value))}
       >
         {presets.map((preset) => (

@@ -81,7 +81,7 @@ export default function RankedList({ cells, features, meta, hovered, pinned, pri
             >
               <span
                 className={cn(
-                  "grid size-6 place-items-center rounded-full text-xs font-semibold tabular-nums",
+                  "grid size-6 place-items-center rounded-full font-mono text-xs font-medium tabular-nums",
                   index < pinned ? "bg-foreground text-background" : "text-muted-foreground",
                 )}
               >
@@ -90,7 +90,7 @@ export default function RankedList({ cells, features, meta, hovered, pinned, pri
               <span className="grid min-w-0 gap-0.5">
                 <span className="font-medium">{cell.country ?? t("Unnamed area")}</span>
                 <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground tabular-nums">
-                  {formatCoord(cell.lat, cell.lon)}
+                  <span className="font-mono">{formatCoord(cell.lat, cell.lon)}</span>
                   <span className={cn("inline-flex items-center gap-1", BAND_CLASS[cell.band])}>
                     <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
                     {t("{band} confidence", { band: t(BAND_LABEL[cell.band]) })}
@@ -108,7 +108,7 @@ export default function RankedList({ cells, features, meta, hovered, pinned, pri
                   </span>
                 )}
               </span>
-              <span className="text-lg font-semibold tabular-nums">{cell.score.toFixed(1)}</span>
+              <span className="font-mono text-lg font-medium tabular-nums">{cell.score.toFixed(1)}</span>
             </button>
           </li>
         ))}

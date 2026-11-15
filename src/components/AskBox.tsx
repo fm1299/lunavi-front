@@ -1,4 +1,4 @@
-import { SparklesIcon } from "lucide-react";
+import { SearchIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ export default function AskBox({ busy, problem, showIdeas, onAsk }: Props) {
           send(text);
         }}
       >
-        <SparklesIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-primary" aria-hidden="true" />
+        <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
         <Input
           className="h-11 pr-24 pl-9 text-[15px]"
           value={text}

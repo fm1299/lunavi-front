@@ -88,7 +88,14 @@ export default function App() {
       </main>
     );
   }
-  if (!boot) return <main className="boot-message">{t("Loading LUNAVI…")}</main>;
+  if (!boot)
+    return (
+      <main className="boot-message boot-loading" aria-busy="true">
+        <img className="boot-logo" src="/brand/lunavi-logo-claro.svg" alt="LUNAVI" />
+        <span className="boot-orbit" aria-hidden="true" />
+        <p>{t("Loading LUNAVI…")}</p>
+      </main>
+    );
   return <Workspace boot={boot} lang={lang} onLang={onLang} />;
 }
 
@@ -443,7 +450,7 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true" />
+          <img className="brand-mark" src="/brand/lunavi-isotipo.svg" alt="" aria-hidden="true" />
           <span className="brand-name">LUNAVI</span>
           <span className="brand-sub">{t("Earth analogs of the Moon and Mars")}</span>
         </div>

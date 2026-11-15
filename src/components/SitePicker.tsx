@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { Body, Meta, Target } from "../api";
 import { api } from "../api";
-import { formatCoord } from "../format";
+import { BODY_COLOR, BRAND, formatCoord } from "../format";
 import { t } from "../i18n";
 
 interface Props {
@@ -101,16 +101,17 @@ export default function SitePicker({ meta, presets, current, onChosen, onCancel 
     const point = L.latLng(latValue, lonValue);
     if (markerRef.current) {
       markerRef.current.setLatLng(point);
+      markerRef.current.setStyle({ fillColor: BODY_COLOR[body] });
     } else {
       markerRef.current = L.circleMarker(point, {
         radius: 8,
-        color: "#0d1117",
+        color: BRAND.hueso,
         weight: 2,
-        fillColor: "#f2a65a",
+        fillColor: BODY_COLOR[body],
         fillOpacity: 1,
       }).addTo(map);
     }
-  }, [latValue, lonValue, valid]);
+  }, [latValue, lonValue, valid, body]);
 
   const find = async () => {
     if (!valid) return;
@@ -140,11 +141,11 @@ export default function SitePicker({ meta, presets, current, onChosen, onCancel 
               { km: meta.site_window_km },
             )}
           </p>
-          <div className="segmented" role="group" aria-label={t("Body")}>
+          <div className="segmented body-switch" role="group" aria-label={t("Body")}>
             {(["moon", "mars"] as const).map((option) => (
               <button
                 key={option}
-                className={body === option ? "active" : ""}
+                className={`body-option-${option} ${body === option ? "active" : ""}`}
                 aria-pressed={body === option}
                 onClick={() => setBody(option)}
               >

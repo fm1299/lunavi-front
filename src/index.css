@@ -12,30 +12,40 @@
 @import "./styles.css";
 @import "tailwindcss/utilities.css" layer(utilities);
 
-/* One dark theme, on the same palette as styles.css. Colors are set as --color-* so they never
-   clash with the --muted and --accent variables that styles.css already uses for other things. */
+/* LUNAVI brand, light theme (brand guide v1.0, section 08). Colors are set as --color-* so they
+   never clash with the --muted and --accent variables that styles.css uses for other things.
+   Primary buttons are black; the Mars rust (--color-mars) is for Mars, links and focus only, and
+   never marks a score or a confidence. */
 @theme {
-  --color-background: #0d1117;
-  --color-foreground: #e8edf2;
-  --color-card: #151b23;
-  --color-card-foreground: #e8edf2;
-  --color-popover: #1c242e;
-  --color-popover-foreground: #e8edf2;
-  --color-primary: #f2a65a;
-  --color-primary-foreground: #1a1206;
-  --color-secondary: #1c242e;
-  --color-secondary-foreground: #e8edf2;
-  --color-muted: #1c242e;
-  --color-muted-foreground: #9aa7b5;
-  --color-accent: #232d39;
-  --color-accent-foreground: #e8edf2;
-  --color-destructive: #ff8f70;
-  --color-border: #2a3441;
-  --color-input: #2a3441;
-  --color-ring: #f2a65a;
-  --color-good: #8fe0a8;
-  --color-fair: #e8d27a;
-  --color-poor: #ff9f85;
+  --color-background: #f7f6f3; /* Hueso */
+  --color-foreground: #0f0f10; /* Negro */
+  --color-card: #ffffff;
+  --color-card-foreground: #0f0f10;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0f0f10;
+  --color-primary: #0f0f10;
+  --color-primary-foreground: #f7f6f3;
+  --color-secondary: #eeede9; /* Niebla */
+  --color-secondary-foreground: #0f0f10;
+  --color-muted: #eeede9;
+  --color-muted-foreground: #62635f; /* Plomo */
+  --color-accent: #e4e3de;
+  --color-accent-foreground: #0f0f10;
+  --color-destructive: #a12f4f;
+  --color-border: #d6d5d0; /* Plomo borde */
+  --color-input: #d6d5d0;
+  --color-ring: #2f3032; /* Grafito */
+  --color-good: #2e7246;
+  --color-fair: #8a5e06;
+  --color-poor: #a12f4f; /* granate, so it is never confused with Mars */
+  --color-mars: #b54a22; /* Óxido */
+  --color-mars-foreground: #f7f6f3;
+  --color-mars-deep: #963a16; /* Óxido profundo */
+  --color-mars-sand: #e39a6e; /* Arena, decorative only */
+  --color-mars-dust: #f5e6db; /* Polvo */
+  --font-display: "Oswald", "Arial Narrow", sans-serif;
+  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, monospace;
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.625rem;
