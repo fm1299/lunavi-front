@@ -1,6 +1,7 @@
 import type { BreakdownRow, CellSheet, Target } from "../api";
 import { BAND_LABEL, formatCoord, formatValue, viridis } from "../format";
 import { t } from "../i18n";
+import { EnvironmentDetails } from "./Environment";
 import { RestrictionBadge, RestrictionDetails } from "./Restriction";
 
 interface Props {
@@ -213,6 +214,7 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
       )}
 
       <RestrictionDetails restrictions={sheet.access_restrictions} />
+      <EnvironmentDetails environment={sheet.environment} isNew={sheet.new_candidate} />
 
       <h3>{t("What to test here")}</h3>
       <ul className="tags">

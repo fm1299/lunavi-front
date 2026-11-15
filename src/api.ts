@@ -75,6 +75,8 @@ export interface Meta {
   ai?: { available: boolean; provider: string | null; model: string | null };
   /** The default beyond-Earth mode. Missing from an older API, which always clamps. */
   beyond_earth_mode?: BeyondMode;
+  /** Distances to the analog catalog: known within `known`, new beyond `near`. */
+  novelty_km?: { known: number; near: number };
 }
 
 export interface Analog {
@@ -127,6 +129,10 @@ export interface FullCell {
   road_km: number | null;
   airport_km: number | null;
   restriction?: RestrictionLevel | null;
+  /** Farther than the novelty distance from every documented analog. */
+  new_candidate?: boolean;
+  /** How many environmental areas hold this cell. */
+  environment_areas?: number;
   /** The weighted features this cell matches best and worst. Missing from an older API. */
   closest_matches?: string[];
   weakest_matches?: string[];
@@ -165,6 +171,7 @@ export interface SummaryFacts {
   purpose: string;
   region: string | null;
   terrain_filter: string[];
+  only_new_places?: boolean;
   cells_compared: number;
   emphasis: { feature: string; site_value: number | string | null; unit: string; beyond_earth_range: boolean } | null;
   beyond_earth_features: string[];
@@ -242,6 +249,7 @@ export interface CellSheet extends FullCell {
   test_tags: string[];
   eligible: boolean;
   access_restrictions?: PlaceRestrictions | null;
+  environment?: PlaceEnvironment | null;
 }
 
 export interface LegalNote {
@@ -259,6 +267,28 @@ export interface RestrictionZone {
   bbox: Bbox | null;
   summary: string;
   legal_notes: LegalNote[];
+}
+
+export interface EnvironmentalNote extends LegalNote {
+  category: string;
+  /** verificado: source opened and confirmed; pendiente: unconfirmed, do not act on it. */
+  verification_status?: "verificado" | "oficial_sin_reabrir" | "secundario" | "pendiente" | null;
+}
+
+export interface EnvironmentalArea {
+  id: string;
+  name: string;
+  applies_to: string[];
+  countries: string[];
+  bbox: Bbox;
+  environmental_notes: EnvironmentalNote[];
+}
+
+/** Environmental areas that hold a place, with their notes. Never changes a score. */
+export interface PlaceEnvironment {
+  areas: EnvironmentalArea[];
+  categories: Record<string, string>;
+  checked: string;
 }
 
 export interface PlaceRestrictions {
@@ -312,6 +342,7 @@ export interface Finding {
     score_change?: number;
   };
   restrictions: (PlaceRestrictions & { country: string | null }) | null;
+  environment?: PlaceEnvironment | null;
 }
 
 export interface FindingSet {
@@ -484,6 +515,8 @@ export interface Query {
   beyond: BeyondMode;
   /** Restriction levels to leave out of the list and map. */
   avoid: RestrictionLevel[];
+  /** Only places far from every documented analog: new candidates for this search. */
+  newOnly: boolean;
 }
 
 async function get<T>(path: string, params?: URLSearchParams, signal?: AbortSignal): Promise<T> {
@@ -507,6 +540,7 @@ function resultParams(query: Query): URLSearchParams {
   if (query.minConfidence > 0) params.set("min_confidence", String(query.minConfidence));
   params.set("beyond", query.beyond);
   if (query.avoid.length) params.set("avoid", query.avoid.join(","));
+  if (query.newOnly) params.set("new_only", "true");
   return params;
 }
 

@@ -109,6 +109,7 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
   // Beyond-Earth values leave the score by default, so the ranking rests on what Earth can imitate.
   const [beyond, setBeyond] = useState<BeyondMode>(meta.beyond_earth_mode ?? "exclude");
   const [avoid, setAvoid] = useState<RestrictionLevel[]>([]);
+  const [newOnly, setNewOnly] = useState(false);
   const [customWeights, setCustomWeights] = useState<Weights | null>(null);
   const [debouncedWeights, setDebouncedWeights] = useState<Weights | null>(null);
   const [presetId, setPresetId] = useState<string | null>(meta.region_presets[0]?.id ?? null);
@@ -155,9 +156,9 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
 
   // Results refresh when a site's slow temperature query finishes, through climate_status.
   const query = useMemo<Query>(
-    () => ({ target: target.id, profile: profileId, weights: debouncedWeights, bbox, terrain, minConfidence, beyond, avoid }),
+    () => ({ target: target.id, profile: profileId, weights: debouncedWeights, bbox, terrain, minConfidence, beyond, avoid, newOnly }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [target.id, target.climate_status, profileId, debouncedWeights, bbox, terrain, minConfidence, beyond, avoid],
+    [target.id, target.climate_status, profileId, debouncedWeights, bbox, terrain, minConfidence, beyond, avoid, newOnly],
   );
 
   useEffect(() => {
@@ -595,6 +596,8 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
                 avoid={avoid}
                 onBeyond={setBeyond}
                 onAvoid={setAvoid}
+                newOnly={newOnly}
+                onNewOnly={setNewOnly}
                 presetId={presetId}
                 terrain={terrain}
                 minConfidence={minConfidence}

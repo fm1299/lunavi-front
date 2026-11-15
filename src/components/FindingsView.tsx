@@ -12,6 +12,7 @@ import { t } from "../i18n";
 import { BAND_CLASS } from "./RankedList";
 import { LegalNotes, RESTRICTION_LABEL, RestrictionBadge, RestrictionDetails } from "./Restriction";
 import BrandStar from "./BrandStar";
+import { EnvironmentDetails } from "./Environment";
 
 interface Props {
   targets: Target[];
@@ -120,6 +121,7 @@ function FindingCard({ finding, features, onOpen }: { finding: Finding; features
       )}
 
       <RestrictionDetails restrictions={finding.restrictions} />
+      <EnvironmentDetails environment={finding.environment} isNew />
 
       <details className="text-xs">
         <summary className="cursor-pointer text-muted-foreground">
@@ -203,6 +205,11 @@ export default function FindingsView({ targets, profiles, features, onOpen }: Pr
           {t(
             "{count} Earth regions that rank in the top 1% for a preset site but are not documented analogs. Each one was checked in the literature in two rounds, and the app recomputes its score from the current table.",
             { count: counts.total },
+          )}
+        </p>
+        <p className="m-0 mt-2 text-sm text-muted-foreground">
+          {t(
+            "These findings were reviewed by the team for the preset sites, so they do not change with your search. For your own site, choose “Only new places” in the search settings.",
           )}
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
