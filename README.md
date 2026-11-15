@@ -13,7 +13,7 @@ npm install
 npm run dev     # http://localhost:5173
 ```
 
-To use an API somewhere else, copy `.env.example` to `.env` and set `VITE_API_URL`. The API must allow that origin through `LUNAVI_CORS_ORIGINS`.
+To use an API somewhere else, copy `.env.example` to `.env` and set `VITE_API_URL`. The API must allow that origin through `LUNAVI_CORS_ORIGINS`. Production builds use `.env.production`, which points at `/api` on the same server; deployment is described in lunavi-back's `deploy/README.md`.
 
 ```powershell
 npm run check   # type-check
