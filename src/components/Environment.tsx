@@ -1,6 +1,6 @@
 import { LeafIcon } from "lucide-react";
 
-import type { PlaceEnvironment } from "../api";
+import type { EnvironmentalNote, PlaceEnvironment } from "../api";
 import { t } from "../i18n";
 
 function hostname(url: string): string {
@@ -10,6 +10,14 @@ function hostname(url: string): string {
     return url;
   }
 }
+
+/** How far each note was checked. Unconfirmed notes are shown faded: do not act on them. */
+const STATUS: Record<NonNullable<EnvironmentalNote["verification_status"]>, { label: string; className: string }> = {
+  verificado: { label: "Verified", className: "border-good/50 text-good" },
+  oficial_sin_reabrir: { label: "Official source", className: "border-border text-muted-foreground" },
+  secundario: { label: "Secondary source", className: "border-border text-muted-foreground" },
+  pendiente: { label: "Unconfirmed: do not act on it", className: "border-fair/50 text-fair" },
+};
 
 /** What to check at a place no one has reviewed yet, such as a new candidate. */
 const NEW_PLACE_CHECKS = [
@@ -67,7 +75,10 @@ export function EnvironmentDetails({
           <summary className="cursor-pointer text-sm">{area.name}</summary>
           <ul className="mt-1 flex flex-col gap-2">
             {area.environmental_notes.map((note) => (
-              <li key={note.topic + note.text.slice(0, 40)} className="text-xs leading-relaxed">
+              <li
+                key={note.topic + note.text.slice(0, 40)}
+                className={note.verification_status === "pendiente" ? "text-xs leading-relaxed opacity-70" : "text-xs leading-relaxed"}
+              >
                 <span className="mr-1 rounded-full border border-border px-1.5 py-px text-[10px] text-muted-foreground">
                   {t(environment.categories[note.category] ?? note.category)}
                 </span>
@@ -75,6 +86,13 @@ export function EnvironmentDetails({
                 <a href={note.source_url} target="_blank" rel="noreferrer" className="whitespace-nowrap">
                   {hostname(note.source_url)}
                 </a>
+                {note.verification_status && (
+                  <span
+                    className={`ml-1 rounded-full border px-1.5 py-px text-[10px] ${STATUS[note.verification_status].className}`}
+                  >
+                    {t(STATUS[note.verification_status].label)}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

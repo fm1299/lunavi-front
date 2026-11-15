@@ -271,6 +271,8 @@ export interface RestrictionZone {
 
 export interface EnvironmentalNote extends LegalNote {
   category: string;
+  /** verificado: source opened and confirmed; pendiente: unconfirmed, do not act on it. */
+  verification_status?: "verificado" | "oficial_sin_reabrir" | "secundario" | "pendiente" | null;
 }
 
 export interface EnvironmentalArea {
