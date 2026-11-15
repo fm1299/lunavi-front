@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { Band, Feature, FullCell, ResultMeta } from "../api";
 import { BAND_LABEL, formatCoord, lowerFirst } from "../format";
 import { numberLocale, t } from "../i18n";
+import { EnvironmentMarker } from "./Environment";
 import { RestrictionBadge } from "./Restriction";
 
 interface Props {
@@ -96,6 +97,7 @@ export default function RankedList({ cells, features, meta, hovered, pinned, pri
                     {t("{band} confidence", { band: t(BAND_LABEL[cell.band]) })}
                   </span>
                   <RestrictionBadge level={cell.restriction} />
+                  <EnvironmentMarker count={cell.environment_areas} />
                   {cell.new_candidate && (
                     <span
                       className="rounded-full border border-good/50 bg-good/10 px-1.5 py-px text-[11px] font-medium leading-4 text-good"

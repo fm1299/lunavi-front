@@ -131,6 +131,8 @@ export interface FullCell {
   restriction?: RestrictionLevel | null;
   /** Farther than the novelty distance from every documented analog. */
   new_candidate?: boolean;
+  /** How many environmental areas hold this cell. */
+  environment_areas?: number;
   /** The weighted features this cell matches best and worst. Missing from an older API. */
   closest_matches?: string[];
   weakest_matches?: string[];
@@ -247,6 +249,7 @@ export interface CellSheet extends FullCell {
   test_tags: string[];
   eligible: boolean;
   access_restrictions?: PlaceRestrictions | null;
+  environment?: PlaceEnvironment | null;
 }
 
 export interface LegalNote {
@@ -264,6 +267,26 @@ export interface RestrictionZone {
   bbox: Bbox | null;
   summary: string;
   legal_notes: LegalNote[];
+}
+
+export interface EnvironmentalNote extends LegalNote {
+  category: string;
+}
+
+export interface EnvironmentalArea {
+  id: string;
+  name: string;
+  applies_to: string[];
+  countries: string[];
+  bbox: Bbox;
+  environmental_notes: EnvironmentalNote[];
+}
+
+/** Environmental areas that hold a place, with their notes. Never changes a score. */
+export interface PlaceEnvironment {
+  areas: EnvironmentalArea[];
+  categories: Record<string, string>;
+  checked: string;
 }
 
 export interface PlaceRestrictions {
@@ -317,6 +340,7 @@ export interface Finding {
     score_change?: number;
   };
   restrictions: (PlaceRestrictions & { country: string | null }) | null;
+  environment?: PlaceEnvironment | null;
 }
 
 export interface FindingSet {

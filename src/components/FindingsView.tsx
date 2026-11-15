@@ -12,6 +12,7 @@ import { t } from "../i18n";
 import { BAND_CLASS } from "./RankedList";
 import { LegalNotes, RESTRICTION_LABEL, RestrictionBadge, RestrictionDetails } from "./Restriction";
 import BrandStar from "./BrandStar";
+import { EnvironmentDetails } from "./Environment";
 
 interface Props {
   targets: Target[];
@@ -120,6 +121,7 @@ function FindingCard({ finding, features, onOpen }: { finding: Finding; features
       )}
 
       <RestrictionDetails restrictions={finding.restrictions} />
+      <EnvironmentDetails environment={finding.environment} isNew />
 
       <details className="text-xs">
         <summary className="cursor-pointer text-muted-foreground">
