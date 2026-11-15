@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 
-import type { Feature, Meta, Profile, Target, Weights } from "../api";
+import type { BeyondMode, Feature, Meta, Profile, RestrictionLevel, Target, Weights } from "../api";
 import { formatValue, TERRAIN_CHIPS } from "../format";
 import { t } from "../i18n";
+import { RESTRICTION_LABEL } from "./Restriction";
 
 interface Props {
   meta: Meta;
@@ -19,6 +20,12 @@ interface Props {
   weights: Weights;
   customized: boolean;
   beyondShare: number;
+  beyond: BeyondMode;
+  /** Features the purpose weighs but the score leaves out, because no Earth site reaches them. */
+  excludedBeyond: string[];
+  avoid: RestrictionLevel[];
+  onBeyond: (mode: BeyondMode) => void;
+  onAvoid: (levels: RestrictionLevel[]) => void;
   presetId: string | null;
   terrain: string[];
   minConfidence: number;
@@ -170,6 +177,35 @@ export default function SearchSettings(props: Props) {
               <strong>{Math.round(beyondShare * 100)}%</strong> {t("of the active weight rests on values beyond Earth's range.")}
             </p>
           )}
+          {props.excludedBeyond.length > 0 && (
+            <p className="text-xs text-primary">
+              {t("Left out of the score: {features}. No place on Earth reaches these values, so test them in a thermal vacuum chamber, not in the field.", {
+                features: props.excludedBeyond.map((key) => t(features.find((f) => f.key === key)?.label ?? key)).join(", "),
+              })}
+            </p>
+          )}
+          {target.beyond_earth.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground">{t("Values beyond Earth's range")}</span>
+              <div className="segmented" role="group" aria-label={t("Values beyond Earth's range")}>
+                {(
+                  [
+                    ["exclude", "Leave them out"],
+                    ["clamp", "Count them at Earth's edge"],
+                  ] as const
+                ).map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    className={props.beyond === mode ? "active" : ""}
+                    aria-pressed={props.beyond === mode}
+                    onClick={() => props.onBeyond(mode)}
+                  >
+                    {t(label)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </AccordionContent>
       </AccordionItem>
 
@@ -229,6 +265,29 @@ export default function SearchSettings(props: Props) {
                 );
               })}
             </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">{t("Leave out places where fieldwork is")}</span>
+            <div className="flex flex-wrap gap-1.5">
+              {(["do_not_travel", "restricted", "permit"] as const).map((level) => {
+                const active = props.avoid.includes(level);
+                return (
+                  <Button
+                    key={level}
+                    size="sm"
+                    variant={active ? "default" : "outline"}
+                    className="h-7 rounded-full"
+                    aria-pressed={active}
+                    onClick={() => props.onAvoid(active ? props.avoid.filter((item) => item !== level) : [...props.avoid, level])}
+                  >
+                    {t(RESTRICTION_LABEL[level])}
+                  </Button>
+                );
+              })}
+            </div>
+            <p className="m-0 text-[11px] text-muted-foreground">
+              {t("A planning filter: it never changes a score.")}
+            </p>
           </div>
           <div className="grid grid-cols-[minmax(0,1fr)_9rem_2.5rem] items-center gap-x-3 text-[13px]">
             <span>{t("Minimum confidence")}</span>

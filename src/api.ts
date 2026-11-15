@@ -7,10 +7,14 @@ export type Band = "high" | "medium" | "low";
 export type Body = "moon" | "mars";
 export type Weights = Record<string, number>;
 export type Bbox = [number, number, number, number];
+/** exclude: beyond-Earth features leave the score; clamp: they count at the edge of Earth's range. */
+export type BeyondMode = "exclude" | "clamp";
+/** Fieldwork restriction of a place, most severe first. A planning label: never part of a score. */
+export type RestrictionLevel = "do_not_travel" | "restricted" | "permit";
 
 export interface TargetFeature {
   value: number | string | null;
-  uncertainty: number | null;
+  uncertainty: number | string | null;
   basis: Basis | null;
   source_url: string | null;
   note: string | null;
@@ -69,6 +73,8 @@ export interface Meta {
   limits_statement: string;
   /** Missing from an API built before the search in plain words (spec FR-AI2). */
   ai?: { available: boolean; provider: string | null; model: string | null };
+  /** The default beyond-Earth mode. Missing from an older API, which always clamps. */
+  beyond_earth_mode?: BeyondMode;
 }
 
 export interface Analog {
@@ -91,6 +97,9 @@ export interface ResultMeta {
   grid_resolution_deg: number;
   beyond_earth: string[];
   beyond_earth_weight_share: number;
+  /** Features the purpose weighs but the score leaves out, because no Earth site reaches them. */
+  excluded_beyond_earth?: string[];
+  beyond_earth_mode?: BeyondMode;
   dummy: boolean;
 }
 
@@ -102,6 +111,7 @@ export interface CompactCells {
   confidence: number[];
   /** Null in an Earth table built before the access layer existed. */
   access: (number | null)[];
+  restriction?: (RestrictionLevel | null)[];
 }
 
 export interface FullCell {
@@ -116,6 +126,7 @@ export interface FullCell {
   access: number | null;
   road_km: number | null;
   airport_km: number | null;
+  restriction?: RestrictionLevel | null;
   /** The weighted features this cell matches best and worst. Missing from an older API. */
   closest_matches?: string[];
   weakest_matches?: string[];
@@ -230,6 +241,84 @@ export interface CellSheet extends FullCell {
   missing_features: string[];
   test_tags: string[];
   eligible: boolean;
+  access_restrictions?: PlaceRestrictions | null;
+}
+
+export interface LegalNote {
+  topic: string;
+  text: string;
+  source_url: string;
+  source_kind: "official" | "news" | "secondary";
+}
+
+export interface RestrictionZone {
+  id: string;
+  name: string;
+  level: RestrictionLevel;
+  countries: string[];
+  bbox: Bbox | null;
+  summary: string;
+  legal_notes: LegalNote[];
+}
+
+export interface PlaceRestrictions {
+  level: RestrictionLevel | null;
+  zones: RestrictionZone[];
+  checked: string;
+}
+
+export interface Restrictions {
+  checked: string;
+  levels: Record<RestrictionLevel, string>;
+  zones: RestrictionZone[];
+  general_notes: LegalNote[];
+}
+
+/** A new region for a preset site, checked in the literature (spec 6.5, FR-P16). */
+export interface Finding {
+  id: string;
+  name: string;
+  cell_ids: string[];
+  bbox: Bbox;
+  n_cells: number;
+  lat: number;
+  lon: number;
+  score_at_review: number;
+  test_first: string[];
+  sources: string[];
+  literature_check: {
+    date: string;
+    queries: string[];
+    result: "studied_in_other_context" | "no_analog_literature_found" | "used_as_analog";
+  };
+  limits: string;
+  status: "proposed" | "confirmed" | "rejected";
+  live: {
+    cell_id: string;
+    score: number | null;
+    confidence: number | null;
+    band: Band | null;
+    closest_matches?: Record<string, number>;
+    weakest_matches?: Record<string, number>;
+    score_as_reviewed?: number;
+  };
+  checks: {
+    cells_outside_bbox: string[];
+    cells_missing_from_table: string[];
+    nearest_known_analog: string | null;
+    nearest_known_analog_km: number | null;
+    is_new: boolean;
+    has_sources: boolean;
+    score_change?: number;
+  };
+  restrictions: (PlaceRestrictions & { country: string | null }) | null;
+}
+
+export interface FindingSet {
+  target_id: string;
+  profile: string;
+  beyond_earth_mode?: BeyondMode;
+  findings: Finding[];
 }
 
 /** One feature through steps 2 to 5: Earth data, site value, common scale and similarity. */
@@ -392,6 +481,9 @@ export interface Query {
   bbox: Bbox | null;
   terrain: string[];
   minConfidence: number;
+  beyond: BeyondMode;
+  /** Restriction levels to leave out of the list and map. */
+  avoid: RestrictionLevel[];
 }
 
 async function get<T>(path: string, params?: URLSearchParams, signal?: AbortSignal): Promise<T> {
@@ -413,6 +505,8 @@ function resultParams(query: Query): URLSearchParams {
   if (query.bbox) params.set("bbox", query.bbox.join(","));
   if (query.terrain.length) params.set("terrain", query.terrain.join(","));
   if (query.minConfidence > 0) params.set("min_confidence", String(query.minConfidence));
+  params.set("beyond", query.beyond);
+  if (query.avoid.length) params.set("avoid", query.avoid.join(","));
   return params;
 }
 
@@ -468,16 +562,18 @@ export const api = {
   portfolio: (query: Query, signal?: AbortSignal) => get<Portfolio>("/portfolio", resultParams(query), signal),
   gaps: (target: string, signal?: AbortSignal) => get<Gaps>("/gaps", new URLSearchParams({ target }), signal),
   /** The search process step by step, for the current site, purpose and weights. */
-  process: (query: Pick<Query, "target" | "profile" | "weights">, signal?: AbortSignal) => {
-    const params = new URLSearchParams({ target: query.target, profile: query.profile });
+  process: (query: Pick<Query, "target" | "profile" | "weights" | "beyond">, signal?: AbortSignal) => {
+    const params = new URLSearchParams({ target: query.target, profile: query.profile, beyond: query.beyond });
     if (query.weights) params.set("weights", weightsParam(query.weights));
     return get<ProcessReport>("/process", params, signal);
   },
-  cell: (cellId: string, query: Pick<Query, "target" | "profile" | "weights">, signal?: AbortSignal) => {
-    const params = new URLSearchParams({ target: query.target, profile: query.profile });
+  cell: (cellId: string, query: Pick<Query, "target" | "profile" | "weights" | "beyond">, signal?: AbortSignal) => {
+    const params = new URLSearchParams({ target: query.target, profile: query.profile, beyond: query.beyond });
     if (query.weights) params.set("weights", weightsParam(query.weights));
     return get<CellSheet>(`/cells/${cellId}`, params, signal);
   },
+  findings: (signal?: AbortSignal) => get<FindingSet[]>("/findings", undefined, signal),
+  restrictions: (signal?: AbortSignal) => get<Restrictions | null>("/restrictions", undefined, signal),
 };
 
 /** Mirrors pipeline.grid.cell_id, so the map can find the cell under the cursor. */

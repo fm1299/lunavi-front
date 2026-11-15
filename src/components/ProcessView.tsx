@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 
-import type { FunnelStage, ProcessReport, Weights } from "../api";
+import type { BeyondMode, FunnelStage, ProcessReport, Weights } from "../api";
 import { api } from "../api";
 import { BAND_LABEL, formatCoord, formatValue, TERRAIN_CHIPS } from "../format";
 import { numberLocale, t } from "../i18n";
@@ -9,6 +9,7 @@ interface Props {
   target: string;
   profile: string;
   weights: Weights | null;
+  beyond: BeyondMode;
   /** Open a cell on the map and its site sheet. */
   onOpenCell: (cellId: string) => void;
 }
@@ -38,7 +39,7 @@ const dec = (value: number | null | undefined, digits = 2) =>
 const pct = (value: number | null | undefined, digits = 0) =>
   value === null || value === undefined ? "–" : `${(value * 100).toFixed(digits)}%`;
 
-export default function ProcessView({ target, profile, weights, onOpenCell }: Props) {
+export default function ProcessView({ target, profile, weights, beyond, onOpenCell }: Props) {
   const [report, setReport] = useState<ProcessReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,13 +47,13 @@ export default function ProcessView({ target, profile, weights, onOpenCell }: Pr
     const controller = new AbortController();
     setError(null);
     api
-      .process({ target, profile, weights }, controller.signal)
+      .process({ target, profile, weights, beyond }, controller.signal)
       .then(setReport)
       .catch((reason: Error) => {
         if (reason.name !== "AbortError") setError(reason.message);
       });
     return () => controller.abort();
-  }, [target, profile, weights]);
+  }, [target, profile, weights, beyond]);
 
   if (error) return <div className="page"><p className="error-banner">{t("Could not load the process: {error}", { error })}</p></div>;
   if (!report) return <div className="page"><p className="muted">{t("Working out every step…")}</p></div>;

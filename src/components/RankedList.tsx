@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { Band, Feature, FullCell, ResultMeta } from "../api";
 import { BAND_LABEL, formatCoord, lowerFirst } from "../format";
 import { numberLocale, t } from "../i18n";
+import { RestrictionBadge } from "./Restriction";
 
 interface Props {
   cells: FullCell[];
@@ -94,6 +95,7 @@ export default function RankedList({ cells, features, meta, hovered, pinned, pri
                     <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
                     {t("{band} confidence", { band: t(BAND_LABEL[cell.band]) })}
                   </span>
+                  <RestrictionBadge level={cell.restriction} />
                 </span>
                 {cell.closest_matches && cell.closest_matches.length > 0 && (
                   <span className="text-xs text-muted-foreground">
