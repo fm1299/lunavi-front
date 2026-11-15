@@ -6,7 +6,7 @@ import { Card, CardLabel } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-import type { Feature, Meta, Profile, Target } from "../api";
+import type { AskNote, Feature, Meta, Profile, Target } from "../api";
 import { lowerFirst, TERRAIN_CHIPS } from "../format";
 import { t } from "../i18n";
 
@@ -27,6 +27,8 @@ interface Props {
   /** Parts filled in by the last question, shown highlighted. */
   fromQuestion: ReadonlySet<string>;
   notApplied: string[];
+  /** The official feature the last question named, or the site it had to keep. */
+  askNote: AskNote | null;
   canUndo: boolean;
   onArea: (id: string) => void;
   onSite: (id: string) => void;
@@ -191,6 +193,26 @@ export default function SearchSentence(props: Props) {
           : t("Your search. Touch a word to change it")}
       </CardLabel>
       <p className="text-base leading-9">{parts}</p>
+      {props.askNote?.place && (
+        <p className="border-l-2 pl-3 text-[13px] text-muted-foreground">
+          {t("{name} ({body}) comes from the official IAU list of planetary names (USGS gazetteer), at its center: {lat}, {lon}.", {
+            name: props.askNote.place.name,
+            body: t(props.askNote.place.body === "moon" ? "Moon" : "Mars"),
+            lat: `${Math.abs(props.askNote.place.lat).toFixed(2)}°${props.askNote.place.lat >= 0 ? "N" : "S"}`,
+            lon: `${Math.abs(props.askNote.place.lon).toFixed(2)}°${props.askNote.place.lon >= 0 ? "E" : "W"}`,
+          })}{" "}
+          {props.askNote.place.link && (
+            <a href={props.askNote.place.link} target="_blank" rel="noreferrer" className="underline">
+              {t("Feature record")}
+            </a>
+          )}
+        </p>
+      )}
+      {props.askNote?.keptSite && (
+        <p className="border-l-2 border-destructive pl-3 text-[13px] text-destructive">
+          {t("That site is not a preset or a name in the official list, so the site stays {site}. Pick another site in the sentence or on the map.", { site: t(props.askNote.keptSite) })}
+        </p>
+      )}
       {props.notApplied.length > 0 && (
         <p className="border-l-2 pl-3 text-[13px] text-muted-foreground">
           {t("I could not use: {parts}. The rest was applied.", { parts: props.notApplied.map((part) => `«${part}»`).join(", ") })}

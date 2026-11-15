@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { Analog, Bbox, BeyondMode, CellSheet, CompactCells, Feature, FullCell, Gaps, Meta, Portfolio, Profile, Query, RestrictionLevel, ResultMeta, SummaryReply, Target, Weights } from "./api";
+import type { Analog, AskNote, Bbox, BeyondMode, CellSheet, CompactCells, Feature, FullCell, Gaps, Meta, Portfolio, Profile, Query, RestrictionLevel, ResultMeta, SummaryReply, Target, Weights } from "./api";
 import { api } from "./api";
 import Answer, { type NextStep } from "./components/Answer";
 import AskBox from "./components/AskBox";
@@ -137,6 +137,7 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
   const [asking, setAsking] = useState(false);
   const [askProblem, setAskProblem] = useState<"not_understood" | "failed" | null>(null);
   const [notApplied, setNotApplied] = useState<string[]>([]);
+  const [askNote, setAskNote] = useState<AskNote | null>(null);
   const [fromQuestion, setFromQuestion] = useState<ReadonlySet<string>>(NO_PARTS);
   const [askRound, setAskRound] = useState(0);
   const [asked, setAsked] = useState(false);
@@ -305,6 +306,7 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
     setPrevious(snapshot());
     setFromQuestion(NO_PARTS);
     setNotApplied([]);
+    setAskNote(null);
     setAskProblem(null);
     change();
   };
@@ -353,6 +355,7 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
     });
     setFromQuestion(NO_PARTS);
     setNotApplied([]);
+    setAskNote(null);
     setAskProblem(null);
     setAskRound((round) => round + 1);
     setAsked(false);
@@ -400,6 +403,7 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
       setDrawing(false);
       setFromQuestion(parts);
       setNotApplied(reply.not_applied);
+      setAskNote({ place: reply.place ?? null, keptSite: reply.site_kept ? plan.target.name : null });
     } catch {
       setAskProblem("failed");
     } finally {
@@ -415,6 +419,7 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
     setEmphasis(null);
     setFromQuestion(NO_PARTS);
     setNotApplied([]);
+    setAskNote(null);
     setSelected(null);
     setView("analogs");
   }, []);
@@ -532,6 +537,7 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
                 terrain={terrain}
                 fromQuestion={fromQuestion}
                 notApplied={notApplied}
+                askNote={askNote}
                 canUndo={previous !== null}
                 onArea={(id) => byHand(() => choosePreset(id))}
                 onSite={(id) => {
@@ -548,6 +554,7 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
                   setPrevious(null);
                   setFromQuestion(NO_PARTS);
                   setNotApplied([]);
+                  setAskNote(null);
                   setAskProblem(null);
                 }}
                 onStartOver={startOver}

@@ -148,11 +148,33 @@ export interface AskPlan {
   min_confidence: number;
 }
 
+/** A Moon or Mars feature found by its official name in the IAU gazetteer (USGS). */
+export interface AskPlace {
+  name: string;
+  body: Body;
+  type: string;
+  diameter_km: number | null;
+  lat: number;
+  lon: number;
+  link: string | null;
+  source: string;
+}
+
 export interface AskReply {
   understood: boolean;
   plan: AskPlan | null;
+  /** Set when the site came from a feature name in the official list. */
+  place?: AskPlace | null;
+  /** True when the request named a site that could not be used, so the site stayed the same. */
+  site_kept?: boolean;
   not_applied: string[];
   model: string | null;
+}
+
+/** What the last question did to the site, shown under the search sentence. */
+export interface AskNote {
+  place: AskPlace | null;
+  keptSite: string | null;
 }
 
 /** The search as it stands, so a request such as "now only deserts" can build on it. */

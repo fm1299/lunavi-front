@@ -357,6 +357,11 @@ const ES: Record<string, string> = {
   "This is what I understood. Touch a word to change it": "Esto entendí. Toca una palabra para cambiarla",
   "Your search. Touch a word to change it": "Tu búsqueda. Toca una palabra para cambiarla",
   "I could not use: {parts}. The rest was applied.": "No pude usar: {parts}. El resto sí se aplicó.",
+  "{name} ({body}) comes from the official IAU list of planetary names (USGS gazetteer), at its center: {lat}, {lon}.":
+    "{name} ({body}) viene de la lista oficial de nombres planetarios de la UAI (gacetero del USGS), en su centro: {lat}, {lon}.",
+  "Feature record": "Ficha del accidente",
+  "That site is not a preset or a name in the official list, so the site stays {site}. Pick another site in the sentence or on the map.":
+    "Ese sitio no es uno predefinido ni un nombre de la lista oficial, así que el sitio sigue siendo {site}. Elige otro sitio en la frase o en el mapa.",
   "Undo last change": "Deshacer último cambio",
   "Start over": "Empezar de nuevo",
   "No place passes these filters. Try a wider area or lower confidence.":
