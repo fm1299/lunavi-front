@@ -96,6 +96,14 @@ export default function RankedList({ cells, features, meta, hovered, pinned, pri
                     {t("{band} confidence", { band: t(BAND_LABEL[cell.band]) })}
                   </span>
                   <RestrictionBadge level={cell.restriction} />
+                  {cell.new_candidate && (
+                    <span
+                      className="rounded-full border border-good/50 bg-good/10 px-1.5 py-px text-[11px] font-medium leading-4 text-good"
+                      title={t("Far from every documented analog: a candidate, not yet checked in the literature.")}
+                    >
+                      {t("New place")}
+                    </span>
+                  )}
                 </span>
                 {cell.closest_matches && cell.closest_matches.length > 0 && (
                   <span className="text-xs text-muted-foreground">

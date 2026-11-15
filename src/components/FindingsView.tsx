@@ -205,6 +205,11 @@ export default function FindingsView({ targets, profiles, features, onOpen }: Pr
             { count: counts.total },
           )}
         </p>
+        <p className="m-0 mt-2 text-sm text-muted-foreground">
+          {t(
+            "These findings were reviewed by the team for the preset sites, so they do not change with your search. For your own site, choose “Only new places” in the search settings.",
+          )}
+        </p>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           {(["do_not_travel", "restricted", "permit"] as const).map(
             (level) =>

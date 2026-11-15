@@ -538,6 +538,16 @@ const ES: Record<string, string> = {
   "A planning label: it never changes the analog score.": "Etiqueta de planificación: nunca cambia el puntaje del análogo.",
   "Leave out places where fieldwork is": "Excluir lugares con trabajo de campo en",
   "A planning filter: it never changes a score.": "Filtro de planificación: nunca cambia un puntaje.",
+  "Which places to show": "Qué lugares mostrar",
+  "All places": "Todos los lugares",
+  "Only new places": "Solo lugares nuevos",
+  "New places lie more than {km} km from every documented analog. They are candidates for this search, not yet checked in the literature.":
+    "Los lugares nuevos están a más de {km} km de todo análogo documentado. Son candidatos para esta búsqueda, aún sin revisar en la literatura.",
+  "New place": "Lugar nuevo",
+  "Far from every documented analog: a candidate, not yet checked in the literature.":
+    "Lejos de todo análogo documentado: un candidato, aún sin revisar en la literatura.",
+  "These findings were reviewed by the team for the preset sites, so they do not change with your search. For your own site, choose “Only new places” in the search settings.":
+    "Estos hallazgos los revisó el equipo para los sitios preset, así que no cambian con tu búsqueda. Para tu propio sitio, elige “Solo lugares nuevos” en la configuración de búsqueda.",
   "official source": "fuente oficial",
   "news report": "nota de prensa",
   "secondary source": "fuente secundaria",

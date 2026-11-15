@@ -26,6 +26,8 @@ interface Props {
   avoid: RestrictionLevel[];
   onBeyond: (mode: BeyondMode) => void;
   onAvoid: (levels: RestrictionLevel[]) => void;
+  newOnly: boolean;
+  onNewOnly: (value: boolean) => void;
   presetId: string | null;
   terrain: string[];
   minConfidence: number;
@@ -288,6 +290,22 @@ export default function SearchSettings(props: Props) {
             </div>
             <p className="m-0 text-[11px] text-muted-foreground">
               {t("A planning filter: it never changes a score.")}
+            </p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">{t("Which places to show")}</span>
+            <div className="segmented" role="group" aria-label={t("Which places to show")}>
+              <button className={!props.newOnly ? "active" : ""} aria-pressed={!props.newOnly} onClick={() => props.onNewOnly(false)}>
+                {t("All places")}
+              </button>
+              <button className={props.newOnly ? "active" : ""} aria-pressed={props.newOnly} onClick={() => props.onNewOnly(true)}>
+                {t("Only new places")}
+              </button>
+            </div>
+            <p className="m-0 text-[11px] text-muted-foreground">
+              {t("New places lie more than {km} km from every documented analog. They are candidates for this search, not yet checked in the literature.", {
+                km: props.meta.novelty_km?.near ?? 0,
+              })}
             </p>
           </div>
           <div className="grid grid-cols-[minmax(0,1fr)_9rem_2.5rem] items-center gap-x-3 text-[13px]">
