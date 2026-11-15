@@ -7,6 +7,7 @@ import AskBox from "./components/AskBox";
 import { GapTable, PortfolioList } from "./components/Coverage";
 import GridMap, { type MapLayer, type ScoreRange } from "./components/GridMap";
 import MethodView from "./components/MethodView";
+import ProcessView from "./components/ProcessView";
 import RankedList from "./components/RankedList";
 import SearchSentence from "./components/SearchSentence";
 import SearchSettings from "./components/SearchSettings";
@@ -15,7 +16,7 @@ import SiteSheet from "./components/SiteSheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { getLang, type Lang, setLang, t } from "./i18n";
 
-type View = "analogs" | "picker" | "method";
+type View = "analogs" | "picker" | "process" | "method";
 type ResultTab = "list" | "portfolio" | "gaps";
 
 const RESULT_TABS: [ResultTab, string][] = [
@@ -444,11 +445,18 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
         </div>
         <nav aria-label={t("Views")}>
           <button
-            className={`tab ${view !== "method" ? "active" : ""}`}
-            aria-current={view !== "method" ? "page" : undefined}
+            className={`tab ${view === "analogs" || view === "picker" ? "active" : ""}`}
+            aria-current={view === "analogs" || view === "picker" ? "page" : undefined}
             onClick={() => setView("analogs")}
           >
             {t("Find analogs")}
+          </button>
+          <button
+            className={`tab ${view === "process" ? "active" : ""}`}
+            aria-current={view === "process" ? "page" : undefined}
+            onClick={() => setView("process")}
+          >
+            {t("Process")}
           </button>
           <button
             className={`tab ${view === "method" ? "active" : ""}`}
@@ -604,6 +612,20 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
 
       {view === "picker" && (
         <SitePicker meta={meta} presets={targets} current={target} onChosen={onChosen} onCancel={() => setView("analogs")} />
+      )}
+
+      {view === "process" && (
+        <main className="page-shell">
+          <ProcessView
+            target={target.id}
+            profile={profileId}
+            weights={debouncedWeights}
+            onOpenCell={(cellId) => {
+              setSelected(cellId);
+              setView("analogs");
+            }}
+          />
+        </main>
       )}
 
       {view === "method" && (

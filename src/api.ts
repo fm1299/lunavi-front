@@ -232,6 +232,159 @@ export interface CellSheet extends FullCell {
   eligible: boolean;
 }
 
+/** One feature through steps 2 to 5: Earth data, site value, common scale and similarity. */
+export interface ProcessFeature {
+  key: string;
+  label: string;
+  unit: string;
+  type: "numeric" | "categorical";
+  source_name: string;
+  source_url: string | null;
+  has_source: boolean;
+  cells_with_data: number | null;
+  share_with_data: number | null;
+  lo: number | null;
+  hi: number | null;
+  earth_p1: number | null;
+  earth_p99: number | null;
+  site_value: number | string | null;
+  site_basis: Basis | null;
+  site_source_url: string | null;
+  site_z: number | null;
+  beyond_earth: boolean;
+  weight: number;
+  gate: number | null;
+  /** Among eligible cells: the median similarity, and the share at or above the cover threshold. */
+  s_median: number | null;
+  s_close_share: number | null;
+}
+
+export interface ProcessExampleRow {
+  key: string;
+  label: string;
+  unit: string;
+  weight: number;
+  gate: number | null;
+  s: number | null;
+  q: number | null;
+  cell_value: number | string | null;
+  site_value: number | string | null;
+  cell_z: number | null;
+  site_z: number | null;
+  beyond_earth: boolean;
+  weighted: number | null;
+  passes_gate: boolean | null;
+}
+
+export type FunnelStage =
+  | "land_cells"
+  | "after_masks"
+  | "after_gates"
+  | "medium_confidence_or_better"
+  | "new"
+  | "candidates"
+  | "findings";
+
+export interface ControlRow {
+  id: string;
+  name: string;
+  comparable: boolean;
+  score: number | null;
+  top_share: number | null;
+  passes?: boolean;
+  in_lower_half?: boolean;
+}
+
+/** How LUNAVI reaches its analogs for one site, step by step (GET /process). */
+export interface ProcessReport {
+  target: { id: string; name: string; body: Body; lat: number; lon: number };
+  profile: { id: string; label: string };
+  weights: Weights;
+  gates: Record<string, number>;
+  dummy: boolean;
+  generated_at: string;
+  grid: { resolution_deg: number; land_cells: number; countries: number; min_land_fraction: number };
+  site_window_km: number;
+  target_quality: Record<Basis, number>;
+  features: ProcessFeature[];
+  terrain: {
+    eligible: number;
+    by_class: Record<string, number>;
+    arid_precip_mm: number;
+    polar_lat_deg: number;
+    volcano_distance_km: number;
+    max_glaciated_fraction: number;
+    exceptions: string[];
+    caves_tagged: number;
+  };
+  score: {
+    vetoed: number;
+    after_gates: number;
+    above_zero: number;
+    p50: number | null;
+    p90: number | null;
+    p99: number | null;
+    max: number | null;
+  };
+  confidence: { bands: { high: number; medium: number }; high: number; medium: number; low: number };
+  novelty: { catalog_size: number; known_km: number; new_km: number; known: number; near_known: number; new: number };
+  candidates: {
+    top_share: number;
+    score_cut: number;
+    cells: number;
+    regions: number;
+    top_regions: {
+      cell_id: string;
+      lat: number;
+      lon: number;
+      country: string | null;
+      cells: number;
+      score: number;
+      confidence: number;
+      nearest_known_km: number;
+    }[];
+  };
+  /** Null for a location chosen on the map: only the presets have reviewed findings. */
+  findings: {
+    profile: string;
+    count: number;
+    by_result: Record<string, number>;
+    items: { id: string; name: string; lat: number; lon: number; cell_id: string; score: number | null; band: Band | null; status: string }[];
+  } | null;
+  /** Null for a location chosen on the map: the controls are assigned to the presets. */
+  validation: {
+    profile: string;
+    accept_top_share: number;
+    stretch_top_share: number;
+    positive_controls: ControlRow[];
+    negative_controls: ControlRow[];
+    positives_passed: number;
+    positives_compared: number;
+    negatives_low: number;
+    negatives_compared: number;
+    lowest_top_overlap: number | null;
+  } | null;
+  funnel: { stage: FunnelStage; count: number | null }[];
+  /** The best cell worked out term by term. Null when no cell scores above 0. */
+  example: {
+    cell_id: string;
+    lat: number;
+    lon: number;
+    country: string | null;
+    terrain: string[];
+    rows: ProcessExampleRow[];
+    weight_sum: number;
+    weighted_sum: number;
+    score: number;
+    mean_quality: number | null;
+    available_share: number | null;
+    confidence: number;
+    band: Band;
+    closest_matches: string[];
+    weakest_matches: string[];
+  } | null;
+}
+
 export interface Query {
   target: string;
   profile: string;
@@ -314,6 +467,12 @@ export const api = {
   },
   portfolio: (query: Query, signal?: AbortSignal) => get<Portfolio>("/portfolio", resultParams(query), signal),
   gaps: (target: string, signal?: AbortSignal) => get<Gaps>("/gaps", new URLSearchParams({ target }), signal),
+  /** The search process step by step, for the current site, purpose and weights. */
+  process: (query: Pick<Query, "target" | "profile" | "weights">, signal?: AbortSignal) => {
+    const params = new URLSearchParams({ target: query.target, profile: query.profile });
+    if (query.weights) params.set("weights", weightsParam(query.weights));
+    return get<ProcessReport>("/process", params, signal);
+  },
   cell: (cellId: string, query: Pick<Query, "target" | "profile" | "weights">, signal?: AbortSignal) => {
     const params = new URLSearchParams({ target: query.target, profile: query.profile });
     if (query.weights) params.set("weights", weightsParam(query.weights));
