@@ -72,10 +72,12 @@ const ES: Record<string, string> = {
   Polar: "Polar",
   Volcanic: "Volcánico",
   Other: "Otros",
+  "Lava tube or cave": "Tubo de lava o cueva",
   arid: "árido",
   polar: "polar",
   volcanic: "volcánico",
   other: "otros",
+  cave: "cueva",
 
   // Features
   Slope: "Pendiente",
@@ -108,6 +110,7 @@ const ES: Record<string, string> = {
   "Thermal control": "Control térmico",
   "Power and insulation cycling": "Ciclos de energía y aislamiento",
   "Long-duration exposure": "Exposición de larga duración",
+  "Construction and anchoring on regolith": "Construcción y anclaje sobre regolito",
   "Ground-ice radar": "Radar de hielo subterráneo",
   "Drilling and coring": "Perforación y extracción de núcleos",
   "Volatile handling": "Manejo de volátiles",
