@@ -1,6 +1,7 @@
 import type { BreakdownRow, CellSheet, Target } from "../api";
 import { BAND_LABEL, formatCoord, formatValue, viridis } from "../format";
 import { t } from "../i18n";
+import { RestrictionBadge, RestrictionDetails } from "./Restriction";
 
 interface Props {
   sheet: CellSheet | null;
@@ -82,7 +83,9 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
 
   const rows = sheet.breakdown;
   const active = rows.filter((row) => row.weight > 0);
-  const inactive = rows.filter((row) => row.weight === 0);
+  // Beyond-Earth values the score leaves out: shown apart, as conditions no Earth site reaches.
+  const excluded = rows.filter((row) => row.weight === 0 && row.beyond_earth && row.target_value !== null);
+  const inactive = rows.filter((row) => row.weight === 0 && !excluded.includes(row));
   const earthSources = [...new Map(active.filter((row) => row.source_url).map((row) => [row.source_name, row])).values()];
   const siteSources = [...new Set(active.flatMap((row) => (row.target_source_url ? [row.target_source_url] : [])))];
   const scaleNote = rows.find((row) => row.key === "slope")?.note;
@@ -108,6 +111,7 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
               {t(terrain)}
             </span>
           ))}
+          <RestrictionBadge level={sheet.restriction} />
         </div>
       </header>
 
@@ -159,6 +163,21 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
         ))}
       </ul>
 
+      {excluded.length > 0 && (
+        <div className="beyond-note">
+          <strong>{t("Beyond Earth, left out of the score")}</strong>
+          <ul className="m-0 mt-1 pl-4">
+            {excluded.map((row) => (
+              <li key={row.key}>
+                {t(row.label)}: {t("Site {value}", { value: formatValue(row.target_value, row.unit) })} ·{" "}
+                {t("Cell {value}", { value: formatValue(row.cell_value, row.unit) })}
+              </li>
+            ))}
+          </ul>
+          <p className="m-0 mt-1">{t("No place on Earth reaches these values: test them in a thermal vacuum chamber.")}</p>
+        </div>
+      )}
+
       {sheet.beyond_earth_weight_share > 0 && (
         <p className="beyond-note">
           <strong>{Math.round(sheet.beyond_earth_weight_share * 100)}%</strong>{" "}
@@ -192,6 +211,8 @@ export default function SiteSheet({ sheet, target, error, onClose }: Props) {
           })}
         </p>
       )}
+
+      <RestrictionDetails restrictions={sheet.access_restrictions} />
 
       <h3>{t("What to test here")}</h3>
       <ul className="tags">

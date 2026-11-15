@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { Analog, Bbox, CellSheet, CompactCells, Feature, FullCell, Gaps, Meta, Portfolio, Profile, Query, ResultMeta, SummaryReply, Target, Weights } from "./api";
+import type { Analog, Bbox, BeyondMode, CellSheet, CompactCells, Feature, FullCell, Gaps, Meta, Portfolio, Profile, Query, RestrictionLevel, ResultMeta, SummaryReply, Target, Weights } from "./api";
 import { api } from "./api";
 import Answer, { type NextStep } from "./components/Answer";
 import AskBox from "./components/AskBox";
 import { GapTable, PortfolioList } from "./components/Coverage";
+import FindingsView from "./components/FindingsView";
 import GridMap, { type MapLayer, type ScoreRange } from "./components/GridMap";
 import MethodView from "./components/MethodView";
 import ProcessView from "./components/ProcessView";
@@ -16,7 +17,7 @@ import SiteSheet from "./components/SiteSheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { getLang, type Lang, setLang, t } from "./i18n";
 
-type View = "analogs" | "picker" | "process" | "method";
+type View = "analogs" | "picker" | "process" | "method" | "findings";
 type ResultTab = "list" | "portfolio" | "gaps";
 
 const RESULT_TABS: [ResultTab, string][] = [
@@ -98,6 +99,9 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
   const [target, setTarget] = useState<Target>(targets[0]);
   const [profileId, setProfileId] = useState(target.default_profile);
   const profile = profiles.find((p) => p.id === profileId)!;
+  // Beyond-Earth values leave the score by default, so the ranking rests on what Earth can imitate.
+  const [beyond, setBeyond] = useState<BeyondMode>(meta.beyond_earth_mode ?? "exclude");
+  const [avoid, setAvoid] = useState<RestrictionLevel[]>([]);
   const [customWeights, setCustomWeights] = useState<Weights | null>(null);
   const [debouncedWeights, setDebouncedWeights] = useState<Weights | null>(null);
   const [presetId, setPresetId] = useState<string | null>(meta.region_presets[0]?.id ?? null);
@@ -144,9 +148,9 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
 
   // Results refresh when a site's slow temperature query finishes, through climate_status.
   const query = useMemo<Query>(
-    () => ({ target: target.id, profile: profileId, weights: debouncedWeights, bbox, terrain, minConfidence }),
+    () => ({ target: target.id, profile: profileId, weights: debouncedWeights, bbox, terrain, minConfidence, beyond, avoid }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [target.id, target.climate_status, profileId, debouncedWeights, bbox, terrain, minConfidence],
+    [target.id, target.climate_status, profileId, debouncedWeights, bbox, terrain, minConfidence, beyond, avoid],
   );
 
   useEffect(() => {
@@ -246,13 +250,13 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
     const controller = new AbortController();
     setSheetError(null);
     api
-      .cell(selected, { target: target.id, profile: profileId, weights: debouncedWeights }, controller.signal)
+      .cell(selected, { target: target.id, profile: profileId, weights: debouncedWeights, beyond }, controller.signal)
       .then(setSheet)
       .catch((error: Error) => {
         if (error.name !== "AbortError") setSheetError(t("Could not load this cell: {error}", { error: error.message }));
       });
     return () => controller.abort();
-  }, [selected, target.id, target.climate_status, profileId, debouncedWeights]);
+  }, [selected, target.id, target.climate_status, profileId, debouncedWeights, beyond]);
 
   // Stretch the color scale over the scores on screen, so differences stay visible.
   const range = useMemo<ScoreRange>(() => {
@@ -459,6 +463,13 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
             {t("Process")}
           </button>
           <button
+            className={`tab ${view === "findings" ? "active" : ""}`}
+            aria-current={view === "findings" ? "page" : undefined}
+            onClick={() => setView("findings")}
+          >
+            {t("New findings")}
+          </button>
+          <button
             className={`tab ${view === "method" ? "active" : ""}`}
             aria-current={view === "method" ? "page" : undefined}
             onClick={() => setView("method")}
@@ -572,6 +583,11 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
                 weights={weights}
                 customized={customWeights !== null}
                 beyondShare={resultMeta?.beyond_earth_weight_share ?? 0}
+                beyond={beyond}
+                excludedBeyond={resultMeta?.excluded_beyond_earth ?? []}
+                avoid={avoid}
+                onBeyond={setBeyond}
+                onAvoid={setAvoid}
                 presetId={presetId}
                 terrain={terrain}
                 minConfidence={minConfidence}
@@ -620,7 +636,24 @@ function Workspace({ boot, lang, onLang }: { boot: Boot; lang: Lang; onLang: (la
             target={target.id}
             profile={profileId}
             weights={debouncedWeights}
+            beyond={beyond}
             onOpenCell={(cellId) => {
+              setSelected(cellId);
+              setView("analogs");
+            }}
+          />
+        </main>
+      )}
+
+      {view === "findings" && (
+        <main className="page-shell">
+          <FindingsView
+            targets={targets}
+            profiles={profiles}
+            features={features}
+            onOpen={(targetId, cellId) => {
+              const preset = targets.find((item) => item.id === targetId);
+              if (preset && preset.id !== target.id) byHand(() => chooseSite(preset));
               setSelected(cellId);
               setView("analogs");
             }}
