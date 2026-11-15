@@ -55,6 +55,7 @@ export const TERRAIN_CHIPS = [
   { id: "polar", label: "Polar" },
   { id: "volcanic", label: "Volcanic" },
   { id: "other", label: "Other" },
+  { id: "cave", label: "Lava tube or cave" },
 ];
 
 /** For a label used in the middle of a sentence: "Rover mobility" reads as "rover mobility". */
