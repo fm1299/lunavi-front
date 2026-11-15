@@ -182,6 +182,9 @@ nav {
 
 .page-shell {
   grid-row: 3;
+  /* Keeps absolutely positioned children, such as screen-reader-only labels, inside the scroll
+     area. Without it they hang below the document and add a second, page-wide scrollbar. */
+  position: relative;
   overflow-y: auto;
   padding: 24px 16px 40px;
 }
